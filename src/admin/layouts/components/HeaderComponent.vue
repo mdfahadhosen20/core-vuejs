@@ -22,7 +22,7 @@
 
     <div class="header-right">
       <!-- Notifications -->
-      <div class="notification-wrapper" ref="notificationRef">
+      <!-- <div class="notification-wrapper" ref="notificationRef">
         <button 
           class="icon-button notification-button" 
           @click="toggleNotifications"
@@ -72,10 +72,10 @@
             </div>
           </div>
         </transition>
-      </div>
+      </div> -->
 
       <!-- Messages -->
-      <div class="message-wrapper" ref="messageRef">
+      <!-- <div class="message-wrapper" ref="messageRef">
         <button 
           class="icon-button message-button" 
           @click="toggleMessages"
@@ -119,7 +119,7 @@
             </div>
           </div>
         </transition>
-      </div>
+      </div> -->
 
       <!-- User Dropdown -->
       <div class="user-dropdown-wrapper" ref="userRef">
@@ -129,11 +129,13 @@
           :class="{ 'active': showUserMenu }"
         >
           <div class="user-avatar">
-            <img src="https://i.pravatar.cc/40?img=33" alt="User">
+            <div class="avatar-placeholder">
+              {{ getUserInitials() }}
+            </div>
           </div>
-          <div class="user-info">
-            <span class="user-name">John Doe</span>
-            <span class="user-role">Admin</span>
+          <div class="user-info" v-if="userData">
+            <span class="user-name">{{ userData.name }}</span>
+            <span class="user-role">Administrator</span>
           </div>
           <svg 
             class="dropdown-arrow" 
@@ -151,23 +153,25 @@
           <div v-if="showUserMenu" class="dropdown-menu user-menu">
             <div class="user-menu-header">
               <div class="user-menu-avatar">
-                <img src="https://i.pravatar.cc/60?img=33" alt="User">
+                <div class="avatar-placeholder-large">
+                  {{ getUserInitials() }}
+                </div>
               </div>
-              <div class="user-menu-info">
-                <p class="user-menu-name">John Doe</p>
-                <p class="user-menu-email">john.doe@example.com</p>
+              <div class="user-menu-info" v-if="userData">
+                <p class="user-menu-name">{{ userData.name }}</p>
+                <p class="user-menu-email">{{ userData.email }}</p>
               </div>
             </div>
             <div class="user-menu-divider"></div>
             <ul class="user-menu-list">
-              <li>
+              <!-- <li>
                 <a href="#" class="user-menu-item" @click.prevent="goToProfile">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                   </svg>
                   <span>Profile</span>
                 </a>
-              </li>
+              </li> -->
               <li>
                 <a href="#" class="user-menu-item" @click.prevent="goToSettings">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -176,21 +180,21 @@
                   <span>Settings</span>
                 </a>
               </li>
-              <li>
+              <!-- <li>
                 <a href="#" class="user-menu-item" @click.prevent="goToHelp">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
                   </svg>
                   <span>Help & Support</span>
                 </a>
-              </li>
+              </li> -->
             </ul>
             <div class="user-menu-divider"></div>
-            <button class="logout-button" @click="handleLogout">
+            <button class="logout-button" @click="handleLogout" :disabled="loggingOut">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/>
               </svg>
-              <span>Logout</span>
+              <span>{{ loggingOut ? 'Logging out...' : 'Logout' }}</span>
             </button>
           </div>
         </transition>
@@ -200,184 +204,250 @@
 </template>
 
 <script setup>
-import { ref, defineEmits, onMounted, onUnmounted } from 'vue';
+import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/store/auth'
+import axios from 'axios'
 
-const emit = defineEmits(['toggle-sidebar']);
+const emit = defineEmits(['toggle-sidebar'])
+const router = useRouter()
+const authStore = useAuthStore()
+
+// User Data
+const userData = ref(null)
+const loggingOut = ref(false)
 
 // Search
-const searchQuery = ref('');
+const searchQuery = ref('')
 
 // Notifications
-const showNotifications = ref(false);
-const notificationRef = ref(null);
-const unreadNotifications = ref(3);
-const notifications = ref([
-  {
-    id: 1,
-    type: 'message',
-    title: 'New message from Sarah',
-    message: 'Hey! Can you review the latest design updates?',
-    time: '5 min ago',
-    read: false
-  },
-  {
-    id: 2,
-    type: 'alert',
-    title: 'Server alert',
-    message: 'CPU usage is above 90% on server 3',
-    time: '15 min ago',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'success',
-    title: 'Deployment successful',
-    message: 'Version 2.1.0 has been deployed to production',
-    time: '1 hour ago',
-    read: false
-  },
-  {
-    id: 4,
-    type: 'message',
-    title: 'New comment',
-    message: 'Michael commented on your post',
-    time: '2 hours ago',
-    read: true
-  }
-]);
+const showNotifications = ref(false)
+const notificationRef = ref(null)
+// const unreadNotifications = ref(3)
+// const notifications = ref([
+//   {
+//     id: 1,
+//     type: 'message',
+//     title: 'New message from Sarah',
+//     message: 'Hey! Can you review the latest design updates?',
+//     time: '5 min ago',
+//     read: false
+//   },
+//   {
+//     id: 2,
+//     type: 'alert',
+//     title: 'Server alert',
+//     message: 'CPU usage is above 90% on server 3',
+//     time: '15 min ago',
+//     read: false
+//   },
+//   {
+//     id: 3,
+//     type: 'success',
+//     title: 'Deployment successful',
+//     message: 'Version 2.1.0 has been deployed to production',
+//     time: '1 hour ago',
+//     read: false
+//   },
+//   {
+//     id: 4,
+//     type: 'message',
+//     title: 'New comment',
+//     message: 'Michael commented on your post',
+//     time: '2 hours ago',
+//     read: true
+//   }
+// ])
 
 // Messages
-const showMessages = ref(false);
-const messageRef = ref(null);
-const unreadMessages = ref(2);
-const messages = ref([
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    avatar: 'https://i.pravatar.cc/40?img=1',
-    text: 'Hey! Can you review the latest design updates?',
-    time: '5m',
-    read: false,
-    online: true
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    avatar: 'https://i.pravatar.cc/40?img=12',
-    text: 'The new feature is ready for testing',
-    time: '1h',
-    read: false,
-    online: true
-  },
-  {
-    id: 3,
-    name: 'Emily Davis',
-    avatar: 'https://i.pravatar.cc/40?img=5',
-    text: 'Thanks for your help with the project!',
-    time: '3h',
-    read: true,
-    online: false
-  },
-  {
-    id: 4,
-    name: 'Alex Martinez',
-    avatar: 'https://i.pravatar.cc/40?img=8',
-    text: 'Meeting scheduled for tomorrow at 10 AM',
-    time: '5h',
-    read: true,
-    online: false
-  }
-]);
+const showMessages = ref(false)
+const messageRef = ref(null)
+// const unreadMessages = ref(2)
+// const messages = ref([
+//   {
+//     id: 1,
+//     name: 'Sarah Johnson',
+//     avatar: 'https://i.pravatar.cc/40?img=1',
+//     text: 'Hey! Can you review the latest design updates?',
+//     time: '5m',
+//     read: false,
+//     online: true
+//   },
+//   {
+//     id: 2,
+//     name: 'Michael Chen',
+//     avatar: 'https://i.pravatar.cc/40?img=12',
+//     text: 'The new feature is ready for testing',
+//     time: '1h',
+//     read: false,
+//     online: true
+//   },
+//   {
+//     id: 3,
+//     name: 'Emily Davis',
+//     avatar: 'https://i.pravatar.cc/40?img=5',
+//     text: 'Thanks for your help with the project!',
+//     time: '3h',
+//     read: true,
+//     online: false
+//   },
+//   {
+//     id: 4,
+//     name: 'Alex Martinez',
+//     avatar: 'https://i.pravatar.cc/40?img=8',
+//     text: 'Meeting scheduled for tomorrow at 10 AM',
+//     time: '5h',
+//     read: true,
+//     online: false
+//   }
+// ])
 
 // User Menu
-const showUserMenu = ref(false);
-const userRef = ref(null);
+const showUserMenu = ref(false)
+const userRef = ref(null)
+
+// Fetch User Data
+const fetchUserData = async () => {
+  try {
+    // Set authorization header with token from auth store
+    axios.defaults.headers.common['Authorization'] = `Bearer ${authStore.token}`
+    
+    const response = await axios.get(process.env.VUE_APP_BASE_API+'/admin/user')
+    
+    if (response.data && response.data.user) {
+      userData.value = response.data.user
+      console.log('User data loaded:', userData.value)
+    }
+  } catch (error) {
+    console.error('Error fetching user data:', error)
+    
+    // If unauthorized, redirect to login
+    if (error.response && error.response.status === 401) {
+      authStore.logout()
+      router.push('/admin/login')
+    }
+  }
+}
+
+// Get User Initials for Avatar
+const getUserInitials = () => {
+  if (!userData.value || !userData.value.name) return 'U'
+  
+  const names = userData.value.name.split(' ')
+  if (names.length >= 2) {
+    return (names[0][0] + names[1][0]).toUpperCase()
+  }
+  return userData.value.name.substring(0, 2).toUpperCase()
+}
 
 const toggleSidebar = () => {
-  emit('toggle-sidebar');
-};
+  emit('toggle-sidebar')
+}
 
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value;
-  showMessages.value = false;
-  showUserMenu.value = false;
-};
+// const toggleNotifications = () => {
+//   showNotifications.value = !showNotifications.value
+//   showMessages.value = false
+//   showUserMenu.value = false
+// }
 
-const toggleMessages = () => {
-  showMessages.value = !showMessages.value;
-  showNotifications.value = false;
-  showUserMenu.value = false;
-};
+// const toggleMessages = () => {
+//   showMessages.value = !showMessages.value
+//   showNotifications.value = false
+//   showUserMenu.value = false
+// }
 
 const toggleUserMenu = () => {
-  showUserMenu.value = !showUserMenu.value;
-  showNotifications.value = false;
-  showMessages.value = false;
-};
+  showUserMenu.value = !showUserMenu.value
+  showNotifications.value = false
+  showMessages.value = false
+}
 
-const markAsRead = (id) => {
-  const notification = notifications.value.find(n => n.id === id);
-  if (notification && !notification.read) {
-    notification.read = true;
-    unreadNotifications.value--;
-  }
-};
+// const markAsRead = (id) => {
+//   const notification = notifications.value.find(n => n.id === id)
+//   if (notification && !notification.read) {
+//     notification.read = true
+//     unreadNotifications.value--
+//   }
+// }
 
-const markAllAsRead = () => {
-  notifications.value.forEach(n => n.read = true);
-  unreadNotifications.value = 0;
-};
+// const markAllAsRead = () => {
+//   notifications.value.forEach(n => n.read = true)
+//   unreadNotifications.value = 0
+// }
 
-const openMessage = (id) => {
-  const message = messages.value.find(m => m.id === id);
-  if (message && !message.read) {
-    message.read = true;
-    unreadMessages.value--;
-  }
-  // Handle opening message
-  console.log('Open message:', id);
-};
+// const openMessage = (id) => {
+//   const message = messages.value.find(m => m.id === id)
+//   if (message && !message.read) {
+//     message.read = true
+//     unreadMessages.value--
+//   }
+//   console.log('Open message:', id)
+// }
 
-const goToProfile = () => {
-  console.log('Navigate to profile');
-  showUserMenu.value = false;
-};
+// const goToProfile = () => {
+//   router.push('/admin/profile')
+//   showUserMenu.value = false
+// }
 
 const goToSettings = () => {
-  console.log('Navigate to settings');
-  showUserMenu.value = false;
-};
+  router.push('/admin/settings')
+  showUserMenu.value = false
+}
 
-const goToHelp = () => {
-  console.log('Navigate to help');
-  showUserMenu.value = false;
-};
+// const goToHelp = () => {
+//   router.push('/admin/help')
+//   showUserMenu.value = false
+// }
 
-const handleLogout = () => {
-  console.log('Logout');
-  // Add your logout logic here
-};
+const handleLogout = async () => {
+  if (loggingOut.value) return
+  
+  loggingOut.value = true
+  
+  try {
+    // Set authorization header
+    axios.defaults.headers.common['Authorization'] = `Bearer ${authStore.token}`
+    
+    // Call logout API
+    await axios.post(process.env.VUE_APP_BASE_API+'/admin/logout')
+    
+    console.log('Logout successful')
+    
+    // Clear auth store and redirect
+    authStore.logout()
+    router.push('/admin/login')
+  } catch (error) {
+    console.error('Logout error:', error)
+    
+    // Even if API fails, still logout locally
+    authStore.logout()
+    router.push('/admin/login')
+  } finally {
+    loggingOut.value = false
+  }
+}
 
 // Click outside to close dropdowns
 const handleClickOutside = (event) => {
   if (notificationRef.value && !notificationRef.value.contains(event.target)) {
-    showNotifications.value = false;
+    showNotifications.value = false
   }
   if (messageRef.value && !messageRef.value.contains(event.target)) {
-    showMessages.value = false;
+    showMessages.value = false
   }
   if (userRef.value && !userRef.value.contains(event.target)) {
-    showUserMenu.value = false;
+    showUserMenu.value = false
   }
-};
+}
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-});
+  document.addEventListener('click', handleClickOutside)
+  fetchUserData()
+})
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
@@ -530,10 +600,21 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.user-button .user-avatar img {
+.avatar-placeholder,
+.avatar-placeholder-large {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.avatar-placeholder-large {
+  font-size: 20px;
 }
 
 .user-info {
@@ -818,12 +899,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.user-menu-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .user-menu-info {
   flex: 1;
   min-width: 0;
@@ -894,8 +969,13 @@ onUnmounted(() => {
   border-radius: 0;
 }
 
-.logout-button:hover {
+.logout-button:hover:not(:disabled) {
   background: #fef2f2;
+}
+
+.logout-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Dropdown Animations */

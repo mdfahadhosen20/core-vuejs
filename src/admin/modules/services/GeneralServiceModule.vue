@@ -3,8 +3,8 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <h1>Country Management</h1>
-        <button class="add-btn" @click="openCreateModal">Add New Country</button>
+        <h1>General Service Management</h1>
+        <button class="add-btn" @click="openCreateModal">Add New Service</button>
       </div>
 
       <!-- Filter Panel Component -->
@@ -19,24 +19,24 @@
       <!-- Loading State -->
       <div v-if="isLoading && !items.length" class="loading-container">
         <div class="spinner-large"></div>
-        <p>Loading countries...</p>
+        <p>Loading services...</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="hasError && !items.length" class="error-container">
         <div class="error-icon">⚠️</div>
-        <h3>Failed to Load Countries</h3>
+        <h3>Failed to Load Services</h3>
         <p>{{ errorMessage }}</p>
-        <button class="retry-btn" @click="loadData">Retry</button>
+        <button class="retry-btn" @click="loadServices">Retry</button>
       </div>
 
       <!-- DataTable Component -->
       <div v-else class="table-container">
         <DataTable
-          :data="paginatedData"
+          :data="paginatedServices"
           :columns="tableColumns"
           :actions="tableActions"
-          result-label="countries"
+          result-label="services"
           @action="handleAction"
           @sort="handleSort"
         >
@@ -44,28 +44,15 @@
           <template #cell-price="{ value }">
             <span class="price-value">{{ value }}</span>
           </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
-            <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
-                class="manage-programs-btn"
-              >
-                Manage Programs
-              </router-link>
-            </div>
-          </template>
         </DataTable>
 
         <!-- Pagination Component -->
         <Pagination
           v-model="currentPage"
-          :total-items="filteredData.length"
+          :total-items="filteredServices.length"
           :page-size="itemsPerPage"
           :page-size-options="[5, 10, 20, 50]"
-          item-label="countries"
+          item-label="services"
           :show-first-last="true"
           :show-jump-to="true"
           @update:page-size="handlePageSizeChange"
@@ -78,7 +65,7 @@
     <BaseModal
       v-model="showFormModal"
       :mode="modalMode"
-      entity-name="country"
+      entity-name="service"
       :fields="formFields"
       :initial-data="selectedService"
       :on-submit="handleFormSubmit"
@@ -91,10 +78,10 @@
     <BaseModal
       v-model="showDeleteModal"
       mode="delete"
-      entity-name="country"
+      entity-name="service"
       :initial-data="selectedService"
       :on-submit="handleDeleteSubmit"
-      delete-message="This country will be permanently removed from the system."
+      delete-message="This service will be permanently removed from the system."
       @success="handleDeleteSuccess"
       @error="handleModalError"
     />
@@ -103,7 +90,7 @@
     <BaseModal
       v-model="showViewModal"
       mode="view"
-      entity-name="country"
+      entity-name="service"
       :fields="formFields"
       :initial-data="selectedService"
       size="large"
@@ -178,6 +165,7 @@ const errorMessage = computed(() => crudStore.getError?.message || 'An error occ
 // Search and pagination state
 const searchFilters = ref({
   serviceName: '',
+  category: '',
   status: '',
   date: ''
 });
@@ -190,18 +178,46 @@ const sortConfig = ref({ by: '', order: 'asc' });
 const formFields = [
   {
     name: 'name',
-    label: 'Country Name',
+    label: 'Service Name',
     type: 'text',
     required: true,
-    placeholder: 'Enter country name...',
-    description: 'The name of the country as it will appear to customers'
+    placeholder: 'Enter service name...',
+    description: 'The name of the service as it will appear to customers'
   },
   {
-    name: 'flag',
-    label: 'Flag',
-    type: 'file',
-    required: false,
-    accept: 'image/*'
+    name: 'duration',
+    label: 'Duration',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter duration...',
+  },
+  {
+    name: 'partner_university_count',
+    label: 'Partner University Count',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter Number of Universities you have colleboration',
+  },
+  {
+    name: 'success_rate',
+    label: 'Success Rate',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter Number of Universities you have colleboration',
+  },
+  {
+    name: 'intake',
+    label: 'Intake',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter Number of Universities you have colleboration',
+  },
+  {
+    name: 'program_level',
+    label: 'Program Level',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter Number of Universities you have colleboration',
   },
   {
     name: 'status',
@@ -218,19 +234,38 @@ const formFields = [
     name: 'short_description',
     label: 'Short Description',
     type: 'textarea',
-    placeholder: 'Enter country description...',
+    placeholder: 'Enter service description...',
+    rows: 4
+  },
+  {
+    name: 'overview',
+    label: 'Overview',
+    type: 'textarea',
+    placeholder: 'Enter service description...',
     rows: 4
   }
 ];
 
 // Filter fields configuration
 const filterFields = [
-  // {
-  //   name: 'name',
-  //   label: 'Country Name',
-  //   type: 'text',
-  //   placeholder: 'Enter country name...'
-  // },
+  {
+    name: 'serviceName',
+    label: 'Service Name',
+    type: 'text',
+    placeholder: 'Enter service name...'
+  },
+  {
+    name: 'category',
+    label: 'Category',
+    type: 'select',
+    placeholder: 'All Categories',
+    options: [
+      { value: 'consulting', label: 'Consulting' },
+      { value: 'development', label: 'Development' },
+      { value: 'support', label: 'Support' },
+      { value: 'maintenance', label: 'Maintenance' }
+    ]
+  },
   {
     name: 'status',
     label: 'Status',
@@ -257,26 +292,35 @@ const tableColumns = [
   },
   {
     key: 'name',
-    label: 'Country Name',
+    label: 'Service Name',
     sortable: true
   },
   {
-    key: 'flag',
-    label: 'Flag',
-    type: 'image',
-    sortable: false,
-    width: '80px' 
+    key: 'duration',
+    label: 'Duration',
+    sortable: true,
+    formatter: (value) => value.charAt(0).toUpperCase() + value.slice(1)
   },
   {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
+    key: 'intake',
+    label: 'Intake',
+    sortable: false
+  },
+  {
+    key: 'program_level',
+    label: 'Program Level',
     sortable: false
   },
   {
     key: 'status',
     label: 'Status',
     type: 'status',
+    sortable: true
+  },
+  {
+    key: 'created_at',
+    label: 'Created Date',
+    type: 'date',
     sortable: true
   },
   {
@@ -306,7 +350,7 @@ const tableActions = [
 ];
 
 // Computed - Filtered services (client-side filtering)
-const filteredData = computed(() => {
+const filteredServices = computed(() => {
   let filtered = items.value.filter(service => {
     const matchesName = !searchFilters.value.serviceName || 
       service.name.toLowerCase().includes(searchFilters.value.serviceName.toLowerCase());
@@ -339,14 +383,14 @@ const filteredData = computed(() => {
 });
 
 // Computed - Paginated services
-const paginatedData = computed(() => {
+const paginatedServices = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
-  return filteredData.value.slice(start, end);
+  return filteredServices.value.slice(start, end);
 });
 
 // Load services from API
-const loadData = async () => {
+const loadServices = async () => {
   // Clear any previous errors
   crudStore.clearError();
   
@@ -376,10 +420,10 @@ const loadData = async () => {
     params.sort_order = sortConfig.value.order;
   }
   
-  const result = await crudStore.fetchAll('/admin/countries', params);
+  const result = await crudStore.fetchAll('/admin/services', params);
   
   if (!result.success) {
-    showNotification('error', 'Failed to load countries', {
+    showNotification('error', 'Failed to load services', {
       details: result.error.message || 'Please try again later.'
     });
   }
@@ -394,7 +438,7 @@ const openCreateModal = () => {
 
 const openEditModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/services/', service.id);
   
   if (result.success) {
     modalMode.value = 'edit';
@@ -414,7 +458,7 @@ const openDeleteModal = (service) => {
 
 const openViewModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/services/', service.id);
   
   if (result.success) {
     selectedService.value = { ...result.data };
@@ -426,77 +470,20 @@ const openViewModal = async (service) => {
   }
 };
 
-// Form submit handler (create/edit) - WITH DEBUGGING
+// Form submit handler (create/edit)
 const handleFormSubmit = async (data, mode, initialData) => {
-  console.log('=== FORM SUBMIT DEBUG ===');
-  console.log('Received data:', data);
-  console.log('Data is FormData?', data instanceof FormData);
-  console.log('Mode:', mode);
-  
   let result;
   
-  // BaseModal is sending FormData, we need to check if it has entries
-  if (data instanceof FormData) {
-    console.log('Data is FormData - checking entries...');
-    
-    let hasData = false;
-    for (let pair of data.entries()) {
-      console.log(`  ${pair[0]}: ${pair[1]}`);
-      hasData = true;
-    }
-    
-    if (!hasData) {
-      console.error('ERROR: FormData is empty!');
-      throw new Error('No form data received');
-    }
-    
-    // FormData already created by BaseModal, use it directly
-    if (mode === 'create') {
-      console.log('Sending CREATE request');
-      result = await crudStore.create('/admin/countries', data);
-    } else {
-      // For update, add ID and _method
-      data.append('id', initialData.id);
-      data.append('_method', 'PUT');
-      console.log('Sending UPDATE request');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, data);
-    }
+  if (mode === 'create') {
+    result = await crudStore.create('/admin/services', data);
   } else {
-    // BaseModal sent plain object
-    console.log('Data is plain object:', data);
-    console.log('Data keys:', Object.keys(data));
-    
-    if (!data || Object.keys(data).length === 0) {
-      console.error('ERROR: No data received!');
-      throw new Error('No form data received');
-    }
-    
-    // Convert to FormData
-    const formData = new FormData();
-    Object.keys(data).forEach(key => {
-      const value = data[key];
-      if (value !== null && value !== undefined && value !== '') {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else {
-          formData.append(key, String(value));
-        }
-      }
-    });
-    
-    if (mode === 'create') {
-      result = await crudStore.create('/admin/countries', formData);
-    } else {
-      formData.append('id', initialData.id);
-      formData.append('_method', 'PUT');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, formData);
-    }
+    // Ensure id is included
+    const updateData = { ...data, id: initialData.id };
+    result = await crudStore.update('/admin/services', updateData);
   }
   
-  console.log('Result:', result);
-  
+  // Return the result (BaseModal will handle success/error events)
   if (!result.success) {
-    console.error('Request failed:', result.error);
     throw new Error(result.error.message);
   }
   
@@ -505,7 +492,7 @@ const handleFormSubmit = async (data, mode, initialData) => {
 
 // Delete submit handler
 const handleDeleteSubmit = async (data) => {
-  const result = await crudStore.delete('/admin/countries/', data.id);
+  const result = await crudStore.delete('/admin/services/', data.id);
   
   if (!result.success) {
     throw new Error(result.error.message);
@@ -517,29 +504,29 @@ const handleDeleteSubmit = async (data) => {
 // Success handlers
 const handleModalSuccess = ({ data, mode }) => {
   if (mode === 'create') {
-    showNotification('success', 'country created successfully!', {
-      details: `${data.name || 'The countrie'} has been added to your services.`,
+    showNotification('success', 'Service created successfully!', {
+      details: `${data.name || 'The service'} has been added to your services.`,
       autoClose: 3000
     });
   } else if (mode === 'edit') {
-    showNotification('success', 'Country updated successfully!', {
-      details: `Changes to ${data.name || 'the country'} have been saved.`,
+    showNotification('success', 'Service updated successfully!', {
+      details: `Changes to ${data.name || 'the service'} have been saved.`,
       autoClose: 3000
     });
   }
   
   // Reload services
-  loadData();
+  loadServices();
 };
 
 const handleDeleteSuccess = () => {
-  showNotification('success', 'Country deleted successfully!', {
-    details: 'The country has been permanently removed from the system.',
+  showNotification('success', 'Service deleted successfully!', {
+    details: 'The service has been permanently removed from the system.',
     autoClose: 3000
   });
   
   // Reload services
-  loadData();
+  loadServices();
 };
 
 // Error handler
@@ -577,10 +564,10 @@ const handleModalError = ({ error, mode }) => {
 // Search and filter handlers
 const handleSearch = () => {
   currentPage.value = 1;
-  loadData();
+  loadServices();
   
   showNotification('info', 'Search filters applied', {
-    details: `Found ${filteredData.value.length} country(s) matching your criteria.`,
+    details: `Found ${filteredServices.value.length} service(s) matching your criteria.`,
     autoClose: 2000
   });
 };
@@ -595,7 +582,7 @@ const handleReset = () => {
   };
   
   currentPage.value = 1;
-  loadData();
+  loadServices();
   
   showNotification('info', 'Filters reset', {
     details: 'All filters have been cleared.',
@@ -606,7 +593,7 @@ const handleReset = () => {
 // Sorting handler
 const handleSort = (sortData) => {
   sortConfig.value = sortData;
-  loadData();
+  loadServices();
 };
 
 // Table action handler
@@ -627,25 +614,25 @@ const handleAction = ({ action, row }) => {
 // Pagination handlers
 const handlePageChange = (page) => {
   currentPage.value = page;
-  loadData();
+  loadServices();
 };
 
 const handlePageSizeChange = (newSize) => {
   itemsPerPage.value = newSize;
   currentPage.value = 1;
-  loadData();
+  loadServices();
 };
 
 // Watch for filter changes (optional - for real-time filtering)
 // Uncomment if you want to reload on every filter change
 // watch(searchFilters, () => {
 //   currentPage.value = 1;
-//   loadData();
+//   loadServices();
 // }, { deep: true });
 
 // Load services on mount
 onMounted(() => {
-  loadData();
+  loadServices();
 });
 
 // Cleanup on unmount
@@ -815,50 +802,6 @@ onBeforeUnmount(() => {
   
   .dashboard {
     padding: 10px;
-  }
-}
-
-
-/* Programs Cell Styles */
-.programs-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.programs-count {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manage-programs-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.manage-programs-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-@media (max-width: 768px) {
-  .programs-cell {
-    width: 100%;
-  }
-  
-  .manage-programs-btn {
-    width: 100%;
   }
 }
 </style>

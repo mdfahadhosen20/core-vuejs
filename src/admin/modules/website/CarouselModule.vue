@@ -3,8 +3,8 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <h1>Country Management</h1>
-        <button class="add-btn" @click="openCreateModal">Add New Country</button>
+        <h1>Carousel Management</h1>
+        <button class="add-btn" @click="openCreateModal">Add New Banner</button>
       </div>
 
       <!-- Filter Panel Component -->
@@ -19,13 +19,13 @@
       <!-- Loading State -->
       <div v-if="isLoading && !items.length" class="loading-container">
         <div class="spinner-large"></div>
-        <p>Loading countries...</p>
+        <p>Loading banners...</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="hasError && !items.length" class="error-container">
         <div class="error-icon">⚠️</div>
-        <h3>Failed to Load Countries</h3>
+        <h3>Failed to Load Banners</h3>
         <p>{{ errorMessage }}</p>
         <button class="retry-btn" @click="loadData">Retry</button>
       </div>
@@ -36,26 +36,14 @@
           :data="paginatedData"
           :columns="tableColumns"
           :actions="tableActions"
-          result-label="countries"
+          result-label="banners"
           @action="handleAction"
           @sort="handleSort"
         >
-          <!-- Custom slot for price column -->
-          <template #cell-price="{ value }">
-            <span class="price-value">{{ value }}</span>
-          </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
-            <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
-                class="manage-programs-btn"
-              >
-                Manage Programs
-              </router-link>
-            </div>
+          <!-- Custom slot for image column - FIXED: Use getImageUrl helper -->
+          <template #cell-file_name="{ value }">
+            <img v-if="value" :src="getImageUrl(value)" alt="Banner" class="banner-thumbnail" />
+            <span v-else class="no-image">No Image</span>
           </template>
         </DataTable>
 
@@ -65,7 +53,7 @@
           :total-items="filteredData.length"
           :page-size="itemsPerPage"
           :page-size-options="[5, 10, 20, 50]"
-          item-label="countries"
+          item-label="banners"
           :show-first-last="true"
           :show-jump-to="true"
           @update:page-size="handlePageSizeChange"
@@ -78,7 +66,7 @@
     <BaseModal
       v-model="showFormModal"
       :mode="modalMode"
-      entity-name="country"
+      entity-name="banner"
       :fields="formFields"
       :initial-data="selectedService"
       :on-submit="handleFormSubmit"
@@ -91,10 +79,10 @@
     <BaseModal
       v-model="showDeleteModal"
       mode="delete"
-      entity-name="country"
+      entity-name="banner"
       :initial-data="selectedService"
       :on-submit="handleDeleteSubmit"
-      delete-message="This country will be permanently removed from the system."
+      delete-message="This banner will be permanently removed from the system."
       @success="handleDeleteSuccess"
       @error="handleModalError"
     />
@@ -103,7 +91,7 @@
     <BaseModal
       v-model="showViewModal"
       mode="view"
-      entity-name="country"
+      entity-name="banner"
       :fields="formFields"
       :initial-data="selectedService"
       size="large"
@@ -124,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useCrudStore } from '@/store/crud';
 import FilterPanel from '../components/FilterComponent.vue';
 import DataTable from '../components/TableComponent.vue';
@@ -135,11 +123,30 @@ import NotificationModal from '../components/NotificationModal.vue';
 // Store
 const crudStore = useCrudStore();
 
+// FIXED: Get API base URL from environment or store
+const API_BASE_URL = process.env.VUE_APP_BASE_URL;
+
+// FIXED: Helper function to construct full image URL
+const getImageUrl = (filePath) => {
+  if (!filePath) return '';
+  
+  // If already a complete URL, return as-is
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+  
+  // Construct full URL: base URL + file path
+  return `${API_BASE_URL}/${cleanPath}`;
+};
+
 // Modal states
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const showViewModal = ref(false);
-const modalMode = ref('create'); // 'create' or 'edit'
+const modalMode = ref('create');
 const selectedService = ref({});
 
 // Notification state
@@ -170,7 +177,6 @@ const showNotification = (type, message, options = {}) => {
 
 // Computed properties from store
 const items = computed(() => crudStore.getAllItems);
-// const pagination = computed(() => crudStore.getPagination);
 const isLoading = computed(() => crudStore.isLoading);
 const hasError = computed(() => crudStore.hasError);
 const errorMessage = computed(() => crudStore.getError?.message || 'An error occurred');
@@ -186,22 +192,43 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const sortConfig = ref({ by: '', order: 'asc' });
 
-// Form fields configuration
+// Form fields configuration - FIXED: Backend expects 'file_name'
 const formFields = [
   {
-    name: 'name',
-    label: 'Country Name',
+    name: 'title',
+    label: 'Title',
     type: 'text',
     required: true,
-    placeholder: 'Enter country name...',
-    description: 'The name of the country as it will appear to customers'
+    placeholder: 'Enter banner title...'
   },
   {
-    name: 'flag',
-    label: 'Flag',
+    name: 'file_name',  // Backend expects 'file_name'
+    label: 'Banner Image',
     type: 'file',
+    required: true,
+    accept: 'image/*',
+    description: 'Upload banner image (JPG, PNG, GIF)'
+  },
+  {
+    name: 'secondary_title',
+    label: 'Secondary Title',
+    type: 'text',
     required: false,
-    accept: 'image/*'
+    placeholder: 'Enter secondary title (optional)...'
+  },
+  {
+    name: 'link_title',
+    label: 'Link Title',
+    type: 'text',
+    required: false,
+    placeholder: 'Enter link title (optional)...'
+  },
+  {
+    name: 'link_path',
+    label: 'Link Path',
+    type: 'text',
+    required: false,
+    placeholder: 'Enter link path (optional)...'
   },
   {
     name: 'status',
@@ -213,23 +240,16 @@ const formFields = [
       { value: 'active', label: 'Active' },
       { value: 'inactive', label: 'Inactive' }
     ]
-  },
-  {
-    name: 'short_description',
-    label: 'Short Description',
-    type: 'textarea',
-    placeholder: 'Enter country description...',
-    rows: 4
   }
 ];
 
 // Filter fields configuration
 const filterFields = [
   // {
-  //   name: 'name',
-  //   label: 'Country Name',
+  //   name: 'title',
+  //   label: 'Banner Title',
   //   type: 'text',
-  //   placeholder: 'Enter country name...'
+  //   placeholder: 'Search by title...'
   // },
   {
     name: 'status',
@@ -256,27 +276,43 @@ const tableColumns = [
     sortable: true
   },
   {
-    key: 'name',
-    label: 'Country Name',
+    key: 'file_name',
+    label: 'Banner Image',
+    sortable: false,
+    width: '120px',
+    type: 'file',
+    accept: 'image/*'
+  },
+  {
+    key: 'title',
+    label: 'Title',
     sortable: true
   },
   {
-    key: 'flag',
-    label: 'Flag',
-    type: 'image',
-    sortable: false,
-    width: '80px' 
+    key: 'secondary_title',
+    label: 'Secondary Title',
+    sortable: false
   },
   {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
+    key: 'link_title',
+    label: 'Link Title',
+    sortable: false
+  },
+  {
+    key: 'link_path',
+    label: 'Link Path',
     sortable: false
   },
   {
     key: 'status',
     label: 'Status',
     type: 'status',
+    sortable: true
+  },
+  {
+    key: 'created_at',
+    label: 'Created Date',
+    type: 'date',
     sortable: true
   },
   {
@@ -305,22 +341,19 @@ const tableActions = [
   }
 ];
 
-// Computed - Filtered services (client-side filtering)
+// Computed - Filtered data
 const filteredData = computed(() => {
-  let filtered = items.value.filter(service => {
-    const matchesName = !searchFilters.value.serviceName || 
-      service.name.toLowerCase().includes(searchFilters.value.serviceName.toLowerCase());
-    
-    const matchesCategory = !searchFilters.value.category || 
-      service.category === searchFilters.value.category;
+  let filtered = items.value.filter(item => {
+    const matchesTitle = !searchFilters.value.title || 
+      item.title?.toLowerCase().includes(searchFilters.value.title.toLowerCase());
     
     const matchesStatus = !searchFilters.value.status || 
-      service.status === searchFilters.value.status;
+      item.status === searchFilters.value.status;
     
     const matchesDate = !searchFilters.value.date || 
-      service.createdDate === searchFilters.value.date;
+      item.created_at === searchFilters.value.date;
     
-    return matchesName && matchesCategory && matchesStatus && matchesDate;
+    return matchesTitle && matchesStatus && matchesDate;
   });
 
   // Apply sorting
@@ -338,30 +371,24 @@ const filteredData = computed(() => {
   return filtered;
 });
 
-// Computed - Paginated services
+// Computed - Paginated data
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
   return filteredData.value.slice(start, end);
 });
 
-// Load services from API
+// Load data from API
 const loadData = async () => {
-  // Clear any previous errors
   crudStore.clearError();
   
-  // Build query parameters
   const params = {
     page: currentPage.value,
     limit: itemsPerPage.value
   };
   
-  // Add search filters if they exist
-  if (searchFilters.value.serviceName) {
-    params.search = searchFilters.value.serviceName;
-  }
-  if (searchFilters.value.category) {
-    params.category = searchFilters.value.category;
+  if (searchFilters.value.title) {
+    params.search = searchFilters.value.title;
   }
   if (searchFilters.value.status) {
     params.status = searchFilters.value.status;
@@ -370,16 +397,15 @@ const loadData = async () => {
     params.date = searchFilters.value.date;
   }
   
-  // Add sorting
   if (sortConfig.value.by) {
     params.sort_by = sortConfig.value.by;
     params.sort_order = sortConfig.value.order;
   }
   
-  const result = await crudStore.fetchAll('/admin/countries', params);
+  const result = await crudStore.fetchAll('/admin/carousel', params);
   
   if (!result.success) {
-    showNotification('error', 'Failed to load countries', {
+    showNotification('error', 'Failed to load banners', {
       details: result.error.message || 'Please try again later.'
     });
   }
@@ -393,15 +419,14 @@ const openCreateModal = () => {
 };
 
 const openEditModal = async (service) => {
-  // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/carousel/', service.id);
   
   if (result.success) {
     modalMode.value = 'edit';
     selectedService.value = { ...result.data };
     showFormModal.value = true;
   } else {
-    showNotification('error', 'Failed to load service details', {
+    showNotification('error', 'Failed to load banner details', {
       details: result.error.message
     });
   }
@@ -413,53 +438,76 @@ const openDeleteModal = (service) => {
 };
 
 const openViewModal = async (service) => {
-  // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/carousel/', service.id);
   
   if (result.success) {
     selectedService.value = { ...result.data };
     showViewModal.value = true;
   } else {
-    showNotification('error', 'Failed to load service details', {
+    showNotification('error', 'Failed to load banner details', {
       details: result.error.message
     });
   }
 };
 
-// Form submit handler (create/edit) - WITH DEBUGGING
+// Form submit handler
 const handleFormSubmit = async (data, mode, initialData) => {
-  console.log('=== FORM SUBMIT DEBUG ===');
+  console.log('=== CAROUSEL FORM SUBMIT DEBUG ===');
   console.log('Received data:', data);
   console.log('Data is FormData?', data instanceof FormData);
   console.log('Mode:', mode);
   
   let result;
   
-  // BaseModal is sending FormData, we need to check if it has entries
   if (data instanceof FormData) {
     console.log('Data is FormData - checking entries...');
     
-    let hasData = false;
-    for (let pair of data.entries()) {
-      console.log(`  ${pair[0]}: ${pair[1]}`);
-      hasData = true;
-    }
+    // Check if FormData has any entries
+    const entries = Array.from(data.entries());
+    console.log('Total entries:', entries.length);
     
-    if (!hasData) {
+    if (entries.length === 0) {
       console.error('ERROR: FormData is empty!');
       throw new Error('No form data received');
     }
     
+    // Log all entries for debugging - ESPECIALLY FILE
+    for (let [key, value] of entries) {
+      if (value instanceof File) {
+        console.log(`  ${key}: [FILE] ${value.name} (${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+    
+    // Check if file_name exists and is a File
+    const fileEntry = data.get('file_name');
+    if (!fileEntry || !(fileEntry instanceof File)) {
+      console.error('ERROR: file_name is not a File object!', fileEntry);
+      throw new Error('Please select an image file to upload');
+    }
+    
+    if (fileEntry.size === 0) {
+      console.error('ERROR: file_name is empty (0 bytes)!');
+      throw new Error('The selected file is empty');
+    }
+    
+    console.log('File validation passed:', {
+      name: fileEntry.name,
+      size: fileEntry.size,
+      type: fileEntry.type
+    });
+    
     // FormData already created by BaseModal, use it directly
     if (mode === 'create') {
-      console.log('Sending CREATE request');
-      result = await crudStore.create('/admin/countries', data);
+      console.log('Sending CREATE request to /admin/carousel');
+      result = await crudStore.create('/admin/carousel', data);
     } else {
       // For update, add ID and _method
       data.append('id', initialData.id);
       data.append('_method', 'PUT');
-      console.log('Sending UPDATE request');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, data);
+      console.log('Sending UPDATE request to /admin/carousel/' + initialData.id);
+      result = await crudStore.post(`/admin/carousel/${initialData.id}`, data);
     }
   } else {
     // BaseModal sent plain object
@@ -471,25 +519,33 @@ const handleFormSubmit = async (data, mode, initialData) => {
       throw new Error('No form data received');
     }
     
+    // Check if file_name exists
+    if (!data.file_name || !(data.file_name instanceof File)) {
+      console.error('ERROR: file_name missing or not a File!', data.file_name);
+      throw new Error('Please select an image file to upload');
+    }
+    
     // Convert to FormData
     const formData = new FormData();
     Object.keys(data).forEach(key => {
       const value = data[key];
       if (value !== null && value !== undefined && value !== '') {
         if (value instanceof File) {
+          console.log(`Adding file: ${key} = ${value.name} (${value.size} bytes)`);
           formData.append(key, value);
         } else {
+          console.log(`Adding field: ${key} = ${value}`);
           formData.append(key, String(value));
         }
       }
     });
     
     if (mode === 'create') {
-      result = await crudStore.create('/admin/countries', formData);
+      result = await crudStore.create('/admin/carousel', formData);
     } else {
       formData.append('id', initialData.id);
       formData.append('_method', 'PUT');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, formData);
+      result = await crudStore.post(`/admin/carousel/${initialData.id}`, formData);
     }
   }
   
@@ -505,7 +561,7 @@ const handleFormSubmit = async (data, mode, initialData) => {
 
 // Delete submit handler
 const handleDeleteSubmit = async (data) => {
-  const result = await crudStore.delete('/admin/countries/', data.id);
+  const result = await crudStore.delete('/admin/carousel/', data.id);
   
   if (!result.success) {
     throw new Error(result.error.message);
@@ -517,28 +573,26 @@ const handleDeleteSubmit = async (data) => {
 // Success handlers
 const handleModalSuccess = ({ data, mode }) => {
   if (mode === 'create') {
-    showNotification('success', 'country created successfully!', {
-      details: `${data.name || 'The countrie'} has been added to your services.`,
+    showNotification('success', 'Banner created successfully!', {
+      details: `${data.title || 'The banner'} has been added.`,
       autoClose: 3000
     });
   } else if (mode === 'edit') {
-    showNotification('success', 'Country updated successfully!', {
-      details: `Changes to ${data.name || 'the country'} have been saved.`,
+    showNotification('success', 'Banner updated successfully!', {
+      details: `Changes to ${data.title || 'the banner'} have been saved.`,
       autoClose: 3000
     });
   }
   
-  // Reload services
   loadData();
 };
 
 const handleDeleteSuccess = () => {
-  showNotification('success', 'Country deleted successfully!', {
-    details: 'The country has been permanently removed from the system.',
+  showNotification('success', 'Banner deleted successfully!', {
+    details: 'The banner has been permanently removed from the system.',
     autoClose: 3000
   });
   
-  // Reload services
   loadData();
 };
 
@@ -580,16 +634,14 @@ const handleSearch = () => {
   loadData();
   
   showNotification('info', 'Search filters applied', {
-    details: `Found ${filteredData.value.length} country(s) matching your criteria.`,
+    details: `Found ${filteredData.value.length} banner(s) matching your criteria.`,
     autoClose: 2000
   });
 };
 
 const handleReset = () => {
-  // Reset filters
   searchFilters.value = {
-    serviceName: '',
-    category: '',
+    title: '',
     status: '',
     date: ''
   };
@@ -636,22 +688,13 @@ const handlePageSizeChange = (newSize) => {
   loadData();
 };
 
-// Watch for filter changes (optional - for real-time filtering)
-// Uncomment if you want to reload on every filter change
-// watch(searchFilters, () => {
-//   currentPage.value = 1;
-//   loadData();
-// }, { deep: true });
-
-// Load services on mount
+// Load data on mount
 onMounted(() => {
   loadData();
 });
 
 // Cleanup on unmount
-import { onBeforeUnmount } from 'vue';
 onBeforeUnmount(() => {
-  // Clear current item when leaving the page
   crudStore.clearCurrentItem();
 });
 </script>
@@ -794,9 +837,19 @@ onBeforeUnmount(() => {
   padding: 40px;
 }
 
-.price-value {
-  font-weight: 600;
-  color: #667eea;
+/* Banner Thumbnail */
+.banner-thumbnail {
+  width: 100px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.no-image {
+  color: #6c757d;
+  font-size: 12px;
+  font-style: italic;
 }
 
 /* Responsive */
@@ -816,49 +869,10 @@ onBeforeUnmount(() => {
   .dashboard {
     padding: 10px;
   }
-}
-
-
-/* Programs Cell Styles */
-.programs-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.programs-count {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manage-programs-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.manage-programs-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-@media (max-width: 768px) {
-  .programs-cell {
-    width: 100%;
-  }
   
-  .manage-programs-btn {
-    width: 100%;
+  .banner-thumbnail {
+    width: 80px;
+    height: 48px;
   }
 }
 </style>

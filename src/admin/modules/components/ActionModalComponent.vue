@@ -56,8 +56,27 @@
                 >
                   <label class="view-label">{{ field.label }}</label>
                   <div class="view-value">
+                    <!-- Image/File preview -->
+                    <template v-if="field.type === 'file' && initialData[field.name]">
+                      <!-- Image preview for image files -->
+                      <div v-if="field.accept && field.accept.includes('image')" class="view-image-preview">
+                        <img 
+                          :src="getExistingImageUrl(field)" 
+                          :alt="field.label"
+                          class="view-preview-image"
+                        />
+                      </div>
+                      <!-- File link for non-image files -->
+                      <div v-else class="view-file-link">
+                        <span class="file-icon">📄</span>
+                        <a :href="getExistingImageUrl(field)" target="_blank" rel="noopener noreferrer">
+                          View File
+                        </a>
+                      </div>
+                    </template>
+                    
                     <!-- Array values (multiselect, features, etc) -->
-                    <template v-if="Array.isArray(initialData[field.name])">
+                    <template v-else-if="Array.isArray(initialData[field.name])">
                       <span v-if="initialData[field.name].length === 0" class="empty-value">None</span>
                       <div v-else class="value-tags">
                         <span 
@@ -268,16 +287,49 @@
                   </div>
 
                   <!-- File Upload -->
-                  <input 
-                    v-else-if="field.type === 'file'"
-                    type="file"
-                    :id="field.name"
-                    :accept="field.accept"
-                    :multiple="field.multiple"
-                    :disabled="field.disabled || loading"
-                    @change="handleFileChange(field, $event)"
-                    class="form-file"
-                  />
+                  <!-- File Upload with Image Preview -->
+                  <div v-else-if="field.type === 'file'" class="file-upload-wrapper">
+                    <!-- Image Preview (only show for image uploads) -->
+                    <div class="image-preview-container" v-if="field.accept && field.accept.includes('image')">
+                      <div class="image-preview">
+                        <img 
+                          :src="filePreview[field.name] || 'https://via.placeholder.com/200x200?text=No+Image'" 
+                          :alt="field.label"
+                          class="preview-image"
+                        />
+                        <button 
+                          v-if="filePreview[field.name]" 
+                          type="button"
+                          class="remove-preview-btn"
+                          @click="removeFilePreview(field.name)"
+                          :disabled="loading"
+                          title="Remove image"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <p class="preview-label">
+                        {{ filePreview[field.name] ? (isFileObject(formData[field.name]) ? 'New Image Selected' : 'Current Image') : 'No Image' }}
+                      </p>
+                    </div>
+                    
+                    <!-- File Input -->
+                    <div class="file-input-group">
+                      <label :for="field.name" class="file-input-label">
+                        <span class="file-input-icon">📁</span>
+                        <span>{{ isFileObject(formData[field.name]) ? formData[field.name].name : 'Choose File' }}</span>
+                      </label>
+                      <input 
+                        type="file"
+                        :id="field.name"
+                        :accept="field.accept"
+                        :multiple="field.multiple"
+                        :disabled="field.disabled || loading"
+                        @change="handleFileChange(field, $event)"
+                        class="form-file"
+                      />
+                    </div>
+                  </div>
 
                   <!-- Color Picker -->
                   <input 
@@ -494,6 +546,22 @@ const formData = ref({});
 const errors = ref({});
 const loading = ref(false);
 const apiError = ref('');
+const filePreview = ref({});
+
+// ✅ FIXED: Safe File type checking helper function
+const isFileObject = (value) => {
+  if (!value || typeof value !== 'object') return false;
+  
+  // Check if it's a Blob (File extends Blob)
+  if (typeof Blob !== 'undefined' && value instanceof Blob) return true;
+  
+  // Check if File constructor exists and value is an instance
+  if (typeof File !== 'undefined' && value instanceof File) return true;
+  
+  // Fallback: check for File-like properties
+  return value.constructor?.name === 'File' || 
+         (value.name && value.size !== undefined && value.type !== undefined);
+};
 
 // Computed properties
 const computedTitle = computed(() => {
@@ -587,7 +655,7 @@ watch(() => props.modelValue, (isOpen) => {
     errors.value = {};
     apiError.value = '';
   }
-});
+}, { immediate: true });
 
 // Watch for initialData changes
 watch(() => props.initialData, () => {
@@ -599,10 +667,19 @@ watch(() => props.initialData, () => {
 // Methods
 const initializeForm = () => {
   const data = {};
+  filePreview.value = {}; // Reset previews
   
   props.fields.forEach(field => {
     if (props.mode === 'edit' && props.initialData[field.name] !== undefined) {
       data[field.name] = props.initialData[field.name];
+      
+      // Set preview for existing images in edit mode
+      if (field.type === 'file' && props.initialData[field.name]) {
+        const imageUrl = getExistingImageUrl(field);
+        if (imageUrl) {
+          filePreview.value[field.name] = imageUrl;
+        }
+      }
     } else if (field.default !== undefined) {
       data[field.name] = field.default;
     } else {
@@ -710,7 +787,43 @@ const validateForm = () => {
 
 const handleFileChange = (field, event) => {
   const files = event.target.files;
-  formData.value[field.name] = field.multiple ? Array.from(files) : files[0];
+  const file = field.multiple ? Array.from(files) : files[0];
+  
+  formData.value[field.name] = file;
+  
+  // Generate preview for image files
+  if (file && file.type && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      filePreview.value[field.name] = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const removeFilePreview = (fieldName) => {
+  formData.value[fieldName] = null;
+  filePreview.value[fieldName] = null;
+  
+  // Clear the file input
+  const fileInput = document.querySelector(`input[type="file"]#${fieldName}`);
+  if (fileInput) {
+    fileInput.value = '';
+  }
+};
+
+const getExistingImageUrl = (field) => {
+  const value = props.initialData[field.name];
+  if (!value) return null;
+  
+  // If it's already a full URL, return it
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  
+  // Otherwise, assume it's a storage path
+  const baseUrl = import.meta.env.VITE_APP_BASE_URL || process.env.VUE_APP_BASE_URL || '';
+  return `${baseUrl}/${value}`;
 };
 
 const handleClose = () => {
@@ -761,19 +874,39 @@ const handleConfirm = async () => {
       data = props.transformData(data);
     }
     
-    // Handle file uploads (convert to FormData if files present)
+    // ✅ FIXED: Better file handling with safe type checking
     const hasFiles = props.fields.some(f => f.type === 'file' && formData.value[f.name]);
+    
     if (hasFiles) {
+      // Create FormData for file uploads
       const formDataObj = new FormData();
+      
       Object.keys(data).forEach(key => {
-        if (data[key] instanceof File) {
-          formDataObj.append(key, data[key]);
-        } else if (Array.isArray(data[key]) && data[key][0] instanceof File) {
-          data[key].forEach(file => formDataObj.append(key, file));
-        } else {
-          formDataObj.append(key, JSON.stringify(data[key]));
+        const value = data[key];
+        
+        // Skip null/undefined/empty values
+        if (value === null || value === undefined || value === '') {
+          return;
+        }
+        
+        // Handle single file
+        if (isFileObject(value)) {
+          formDataObj.append(key, value);
+        }
+        // Handle multiple files
+        else if (Array.isArray(value) && value.length > 0 && isFileObject(value[0])) {
+          value.forEach(file => formDataObj.append(key, file));
+        }
+        // Handle arrays (but not file arrays)
+        else if (Array.isArray(value)) {
+          formDataObj.append(key, JSON.stringify(value));
+        }
+        // Handle regular values - don't JSON.stringify!
+        else {
+          formDataObj.append(key, String(value));
         }
       });
+      
       data = formDataObj;
     }
     
@@ -802,8 +935,8 @@ const handleConfirm = async () => {
       throw new Error('No API configuration or onSubmit handler provided');
     }
     
-    emit('submit', { data, response, mode: props.mode });
-    emit('success', { data, response, mode: props.mode });
+    emit('submit', { data: response, mode: props.mode });
+    emit('success', { data: response, mode: props.mode });
     
     if (props.autoClose) {
       handleClose();
@@ -1158,6 +1291,47 @@ if (props.modelValue) {
   color: #721c24;
 }
 
+/* View Mode Image/File Preview */
+.view-image-preview {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+.view-preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.view-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.view-file-link .file-icon {
+  font-size: 20px;
+}
+
+.view-file-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.view-file-link a:hover {
+  color: #5568d3;
+  text-decoration: underline;
+}
+
 /* Form */
 .modal-form {
   display: flex;
@@ -1460,5 +1634,126 @@ if (props.modelValue) {
   .btn {
     width: 100%;
   }
+  
+  .view-preview-image {
+    max-height: 250px;
+  }
+  
+  .image-preview {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+/* File Upload with Image Preview */
+.file-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.image-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.image-preview {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-preview-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.image-preview:hover .remove-preview-btn {
+  opacity: 1;
+}
+
+.remove-preview-btn:hover:not(:disabled) {
+  background: rgba(200, 35, 51, 1);
+  transform: scale(1.1);
+}
+
+.remove-preview-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-label {
+  font-size: 13px;
+  color: #6c757d;
+  margin: 0;
+  font-weight: 500;
+}
+
+.file-input-group {
+  position: relative;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #667eea;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  justify-content: center;
+}
+
+.file-input-label:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.file-input-icon {
+  font-size: 18px;
+}
+
+.form-file {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
 }
 </style>

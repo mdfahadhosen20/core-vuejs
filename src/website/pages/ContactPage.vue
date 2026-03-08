@@ -13,7 +13,7 @@
             <div class="hero-badge">Get In Touch</div>
             <h1 class="hero-title">Let's Start Your Journey Together</h1>
             <p class="hero-description">
-              Have questions about studying abroad? Our expert counselors are here to help you every step of the way. 
+              Have questions about studying abroad? Our expert counselors are here to help you every step of the way.
               Reach out to us and let's make your dreams a reality.
             </p>
             <div class="hero-features">
@@ -53,11 +53,9 @@
                   <stop offset="100%" style="stop-color:#DC2626;stop-opacity:1" />
                 </linearGradient>
               </defs>
-              <!-- Envelope -->
               <rect x="150" y="150" width="200" height="140" rx="8" fill="url(#grad1)"/>
               <path d="M150,150 L250,220 L350,150" fill="none" stroke="white" stroke-width="4"/>
               <polygon points="150,150 250,220 350,150 350,160 250,230 150,160" fill="url(#grad2)" opacity="0.8"/>
-              <!-- Flying paper planes -->
               <g class="plane plane-1">
                 <path d="M100,100 L120,110 L105,115 Z" fill="url(#grad2)"/>
               </g>
@@ -67,11 +65,9 @@
               <g class="plane plane-3">
                 <path d="M90,250 L110,260 L95,265 Z" fill="url(#grad1)"/>
               </g>
-              <!-- Decorative circles -->
               <circle cx="80" cy="180" r="25" fill="url(#grad2)" opacity="0.2"/>
               <circle cx="420" cy="200" r="30" fill="url(#grad1)" opacity="0.2"/>
               <circle cx="400" cy="300" r="20" fill="url(#grad2)" opacity="0.3"/>
-              <!-- Message bubbles -->
               <circle cx="180" cy="320" r="15" fill="url(#grad1)" opacity="0.6"/>
               <circle cx="320" cy="330" r="12" fill="url(#grad2)" opacity="0.6"/>
             </svg>
@@ -91,10 +87,22 @@
               <p>Fill out the form and our team will get back to you within 24 hours</p>
             </div>
 
+            <!-- Loading skeleton for contact cards -->
+            <div v-if="systemLoading" class="contact-cards">
+              <div v-for="i in 4" :key="i" class="contact-card skeleton-card">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-content">
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line medium"></div>
+                </div>
+              </div>
+            </div>
+
             <!-- Contact Cards -->
-            <div class="contact-cards">
+            <div v-else class="contact-cards">
               <!-- Address Card -->
-              <div class="contact-card">
+              <div class="contact-card" v-if="systemData">
                 <div class="card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -103,12 +111,18 @@
                 </div>
                 <div class="card-content">
                   <h4>Visit Our Office</h4>
-                  <p>123 Education Street<br>New York, NY 10001<br>United States</p>
+                  <p>
+                    {{ systemData.address }}<br>
+                    {{ systemData.city }}
+                    <template v-if="systemData.state">, {{ systemData.state }}</template>
+                    <template v-if="systemData.zip_code"> {{ systemData.zip_code }}</template><br>
+                    {{ systemData.country }}
+                  </p>
                 </div>
               </div>
 
               <!-- Phone Card -->
-              <div class="contact-card">
+              <div class="contact-card" v-if="systemData">
                 <div class="card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -117,15 +131,26 @@
                 <div class="card-content">
                   <h4>Call Us</h4>
                   <p>
-                    <a href="tel:+12345678900">+1 (234) 567-890</a><br>
-                    <a href="tel:+12345678901">+1 (234) 567-891</a><br>
-                    <span class="availability">Mon-Fri: 9AM - 6PM</span>
+                    <a :href="`tel:${systemData.phone}`">{{ systemData.phone }}</a>
+                    <template v-if="systemData.alternate_phone && systemData.alternate_phone !== systemData.phone">
+                      <br><a :href="`tel:${systemData.alternate_phone}`">{{ systemData.alternate_phone }}</a>
+                    </template>
+                    <template v-if="systemData.whatsapp">
+                      <br><a :href="`https://wa.me/${systemData.whatsapp}`" target="_blank" class="whatsapp-link">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                        </svg>
+                        WhatsApp
+                      </a>
+                    </template>
+                    <span class="availability" v-if="systemData.business_hours">{{ systemData.business_hours }}</span>
+                    <span class="availability" v-else>Mon-Fri: 9AM - 6PM</span>
                   </p>
                 </div>
               </div>
 
               <!-- Email Card -->
-              <div class="contact-card">
+              <div class="contact-card" v-if="systemData">
                 <div class="card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
@@ -135,75 +160,56 @@
                 <div class="card-content">
                   <h4>Email Us</h4>
                   <p>
-                    <a href="mailto:info@studentconsult.com">info@studentconsult.com</a><br>
-                    <a href="mailto:support@studentconsult.com">support@studentconsult.com</a><br>
+                    <a :href="`mailto:${systemData.email}`">{{ systemData.email }}</a>
                     <span class="availability">We reply within 24 hours</span>
                   </p>
                 </div>
               </div>
 
-              <!-- Working Hours Card -->
-              <div class="contact-card">
+              <!-- Social Media Card -->
+              <div class="contact-card" v-if="systemData && hasSocialLinks">
                 <div class="card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
+                    <circle cx="18" cy="5" r="3"/>
+                    <circle cx="6" cy="12" r="3"/>
+                    <circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                   </svg>
                 </div>
                 <div class="card-content">
-                  <h4>Working Hours</h4>
-                  <p>
-                    Monday - Friday: 9:00 AM - 6:00 PM<br>
-                    Saturday: 10:00 AM - 4:00 PM<br>
-                    Sunday: Closed
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Map -->
-            <div class="map-container">
-              <div class="map-placeholder">
-                <svg viewBox="0 0 400 300" class="map-svg">
-                  <defs>
-                    <linearGradient id="mapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#E5E7EB;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#D1D5DB;stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="400" height="300" fill="url(#mapGrad)"/>
-                  <!-- Grid lines -->
-                  <line x1="0" y1="100" x2="400" y2="100" stroke="#9CA3AF" stroke-width="1" opacity="0.3"/>
-                  <line x1="0" y1="200" x2="400" y2="200" stroke="#9CA3AF" stroke-width="1" opacity="0.3"/>
-                  <line x1="100" y1="0" x2="100" y2="300" stroke="#9CA3AF" stroke-width="1" opacity="0.3"/>
-                  <line x1="200" y1="0" x2="200" y2="300" stroke="#9CA3AF" stroke-width="1" opacity="0.3"/>
-                  <line x1="300" y1="0" x2="300" y2="300" stroke="#9CA3AF" stroke-width="1" opacity="0.3"/>
-                  <!-- Roads -->
-                  <path d="M50,150 Q150,120 250,150 T400,180" stroke="#6B7280" stroke-width="3" fill="none"/>
-                  <path d="M150,0 L180,300" stroke="#6B7280" stroke-width="3"/>
-                  <!-- Pin -->
-                  <g transform="translate(200, 150)">
-                    <ellipse cx="0" cy="35" rx="15" ry="5" fill="#1E40AF" opacity="0.3"/>
-                    <path d="M0,-20 C-10,-20 -15,-10 -15,0 C-15,15 0,35 0,35 C0,35 15,15 15,0 C15,-10 10,-20 0,-20 Z" fill="#EF4444"/>
-                    <circle cx="0" cy="0" r="6" fill="white"/>
-                  </g>
-                  <!-- Buildings -->
-                  <rect x="80" y="180" width="30" height="40" fill="#4B5563"/>
-                  <rect x="120" y="170" width="25" height="50" fill="#4B5563"/>
-                  <rect x="280" y="190" width="35" height="30" fill="#4B5563"/>
-                  <!-- Windows -->
-                  <rect x="85" y="185" width="5" height="5" fill="#FCD34D"/>
-                  <rect x="95" y="185" width="5" height="5" fill="#FCD34D"/>
-                  <rect x="85" y="195" width="5" height="5" fill="#FCD34D"/>
-                  <rect x="95" y="195" width="5" height="5" fill="#FCD34D"/>
-                </svg>
-                <div class="map-overlay">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
-                  <span>123 Education Street, New York</span>
-                  <a href="https://maps.google.com" target="_blank" class="map-link">Get Directions →</a>
+                  <h4>Follow Us</h4>
+                  <div class="social-row">
+                    <a v-if="systemData.facebook" :href="systemData.facebook" target="_blank" class="social-icon facebook" title="Facebook">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                      </svg>
+                    </a>
+                    <a v-if="systemData.twitter" :href="systemData.twitter" target="_blank" class="social-icon twitter" title="Twitter">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                      </svg>
+                    </a>
+                    <a v-if="systemData.instagram" :href="systemData.instagram" target="_blank" class="social-icon instagram" title="Instagram">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                        <path fill="white" d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                        <line stroke="white" x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                      </svg>
+                    </a>
+                    <a v-if="systemData.linkedin" :href="systemData.linkedin" target="_blank" class="social-icon linkedin" title="LinkedIn">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
+                        <circle cx="4" cy="4" r="2"/>
+                      </svg>
+                    </a>
+                    <a v-if="systemData.youtube" :href="systemData.youtube" target="_blank" class="social-icon youtube" title="YouTube">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/>
+                        <polygon fill="white" points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
+                      </svg>
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -217,117 +223,116 @@
                 <p>Have a specific question? Fill out the form below and we'll get back to you as soon as possible.</p>
               </div>
 
+              <!-- Error alert -->
+              <div v-if="formError" class="alert alert-error">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ formError }}</span>
+              </div>
+
               <form @submit.prevent="submitForm" class="contact-form">
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="firstName">
-                      First Name *
-                      <span class="label-icon">👤</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      id="firstName" 
-                      v-model="formData.firstName" 
+                    <label for="firstName">First Name <span class="required">*</span></label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      v-model="formData.firstName"
                       required
                       placeholder="John"
+                      :disabled="isSubmitting"
                     />
                   </div>
                   <div class="form-group">
-                    <label for="lastName">
-                      Last Name *
-                      <span class="label-icon">👤</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      id="lastName" 
-                      v-model="formData.lastName" 
+                    <label for="lastName">Last Name <span class="required">*</span></label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      v-model="formData.lastName"
                       required
                       placeholder="Doe"
+                      :disabled="isSubmitting"
                     />
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="email">
-                      Email Address *
-                      <span class="label-icon">📧</span>
-                    </label>
-                    <input 
-                      type="email" 
-                      id="email" 
-                      v-model="formData.email" 
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    <input
+                      type="email"
+                      id="email"
+                      v-model="formData.email"
                       required
                       placeholder="john.doe@example.com"
+                      :disabled="isSubmitting"
                     />
                   </div>
                   <div class="form-group">
-                    <label for="phone">
-                      Phone Number *
-                      <span class="label-icon">📱</span>
-                    </label>
-                    <input 
-                      type="tel" 
-                      id="phone" 
-                      v-model="formData.phone" 
+                    <label for="phone">Phone Number <span class="required">*</span></label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      v-model="formData.phone"
                       required
                       placeholder="+1 234 567 8900"
+                      :disabled="isSubmitting"
                     />
                   </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="subject">
-                    Subject *
-                    <span class="label-icon">📋</span>
-                  </label>
-                  <select id="subject" v-model="formData.subject" required>
+                  <label for="subject">Subject <span class="required">*</span></label>
+                  <select id="subject" v-model="formData.subject" required :disabled="isSubmitting">
                     <option value="">Select a subject</option>
-                    <option value="general">General Inquiry</option>
-                    <option value="undergraduate">Undergraduate Programs</option>
-                    <option value="graduate">Graduate Programs</option>
-                    <option value="postgraduate">Postgraduate/PhD Programs</option>
-                    <option value="visa">Visa Assistance</option>
-                    <option value="scholarship">Scholarship Information</option>
-                    <option value="other">Other</option>
+                    <option value="General Inquiry">General Inquiry</option>
+                    <option value="Undergraduate Programs">Undergraduate Programs</option>
+                    <option value="Graduate Programs">Graduate Programs</option>
+                    <option value="Postgraduate/PhD Programs">Postgraduate/PhD Programs</option>
+                    <option value="Visa Assistance">Visa Assistance</option>
+                    <option value="Scholarship Information">Scholarship Information</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 
+                <!-- Country dropdown from API -->
                 <div class="form-group">
-                  <label for="country">
-                    Preferred Country
-                    <span class="label-icon">🌍</span>
-                  </label>
-                  <select id="country" v-model="formData.country">
+                  <label for="country">Preferred Country</label>
+                  <select id="country" v-model="formData.preferred_country" :disabled="isSubmitting">
                     <option value="">Select a country (Optional)</option>
-                    <option value="usa">United States</option>
-                    <option value="canada">Canada</option>
-                    <option value="uk">United Kingdom</option>
-                    <option value="malaysia">Malaysia</option>
-                    <option value="other">Other</option>
+                    <option
+                      v-for="country in countries"
+                      :key="country.value"
+                      :value="country.value"
+                    >
+                      {{ country.label }}
+                    </option>
                   </select>
                 </div>
 
                 <div class="form-group">
-                  <label for="message">
-                    Your Message *
-                    <span class="label-icon">✍️</span>
-                  </label>
-                  <textarea 
-                    id="message" 
-                    v-model="formData.message" 
+                  <label for="message">Your Message <span class="required">*</span></label>
+                  <textarea
+                    id="message"
+                    v-model="formData.message"
                     rows="6"
                     required
+                    maxlength="1000"
                     placeholder="Tell us about your goals, questions, or concerns..."
+                    :disabled="isSubmitting"
                   ></textarea>
-                  <span class="char-count">{{ formData.message.length }} / 1000</span>
+                  <span class="char-count" :class="{ 'near-limit': formData.message.length > 900 }">
+                    {{ formData.message.length }} / 1000
+                  </span>
                 </div>
 
-                <div class="form-group checkbox-group">
-                  <input 
-                    type="checkbox" 
-                    id="newsletter" 
-                    v-model="formData.newsletter"
+                <div class="form-group checkbox-group" v-if="systemData?.enable_newsletter">
+                  <input
+                    type="checkbox"
+                    id="newsletter"
+                    v-model="formData.send_updates"
+                    :disabled="isSubmitting"
                   />
                   <label for="newsletter">
                     Send me updates about study abroad opportunities and events
@@ -335,14 +340,15 @@
                 </div>
 
                 <div class="form-group checkbox-group">
-                  <input 
-                    type="checkbox" 
-                    id="terms" 
-                    v-model="formData.agreeToTerms" 
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    v-model="formData.terms_conditions"
                     required
+                    :disabled="isSubmitting"
                   />
                   <label for="terms">
-                    I agree to the <a href="#terms">Terms & Conditions</a> and <a href="#privacy">Privacy Policy</a> *
+                    I agree to the <a href="#terms">Terms & Conditions</a> and <a href="#privacy">Privacy Policy</a> <span class="required">*</span>
                   </label>
                 </div>
 
@@ -354,9 +360,10 @@
                     </svg>
                     Send Message
                   </span>
-                  <span v-else>
-                    <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
+                  <span v-else class="loading-text">
+                    <svg class="spinner-svg" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none"/>
                     </svg>
                     Sending...
                   </span>
@@ -365,7 +372,7 @@
             </div>
 
             <!-- Quick Stats -->
-            <div class="quick-stats">
+            <!-- <div class="quick-stats">
               <div class="stat-box">
                 <div class="stat-icon">⚡</div>
                 <div class="stat-content">
@@ -387,7 +394,7 @@
                   <span class="stat-label">Success Rate</span>
                 </div>
               </div>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
@@ -404,9 +411,9 @@
             </svg>
           </div>
           <h3>Message Sent Successfully!</h3>
-          <p>Thank you for reaching out to StudentConsult. We've received your message and will get back to you within 24 hours.</p>
+          <p>Thank you for reaching out to us. We've received your message and will get back to you within 24 hours.</p>
           <p class="confirmation-email">
-            A confirmation has been sent to <strong>{{ formData.email }}</strong>
+            A confirmation has been sent to <strong>{{ submittedEmail }}</strong>
           </p>
           <button @click="closeModal" class="modal-btn">Close</button>
         </div>
@@ -416,68 +423,121 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'ContactPage',
   data() {
     return {
+      systemData: null,
+      systemLoading: true,
+      countries: [],
       formData: {
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
         subject: '',
-        country: '',
+        preferred_country: '',
         message: '',
-        newsletter: false,
-        agreeToTerms: false
+        send_updates: false,
+        terms_conditions: false
       },
       isSubmitting: false,
       showSuccessModal: false,
-      activeFaq: null,
-      faqs: [
-        {
-          question: 'How long does the application process take?',
-          answer: 'The application process typically takes 3-6 months from initial consultation to university acceptance, depending on the country and program. We guide you through each step to ensure timely submissions.'
-        },
-        {
-          question: 'Do you charge for consultation services?',
-          answer: 'Your first consultation is completely free! After that, we offer flexible packages based on your needs. Our fees cover comprehensive support including application assistance, visa processing, and pre-departure guidance.'
-        },
-        {
-          question: 'Can you help with scholarship applications?',
-          answer: 'Absolutely! We have dedicated scholarship advisors who help identify suitable opportunities and guide you through the application process. Many of our students receive partial to full scholarships.'
-        },
-        {
-          question: 'What documents do I need to get started?',
-          answer: 'Initially, you\'ll need your academic transcripts, passport copy, and English proficiency test scores (if available). During consultation, we\'ll provide a comprehensive checklist based on your chosen program and country.'
-        },
-        {
-          question: 'Do you provide visa assistance?',
-          answer: 'Yes! Visa assistance is a key part of our service. We help with document preparation, application submission, and interview preparation to maximize your chances of visa approval.'
-        },
-        {
-          question: 'How do I track my application status?',
-          answer: 'We provide a personalized online portal where you can track all your applications in real-time. You\'ll also receive regular updates via email and phone from your dedicated counselor.'
-        }
-      ]
+      formError: null,
+      submittedEmail: ''
     }
   },
-  methods: {
-    async submitForm() {
-      if (this.formData.message.length > 1000) {
-        alert('Message is too long. Please keep it under 1000 characters.')
-        return
-      }
 
-      this.isSubmitting = true
-      
-      // Simulate API call
-      setTimeout(() => {
-        console.log('Form submitted:', this.formData)
-        this.isSubmitting = false
-        this.showSuccessModal = true
-        this.resetForm()
-      }, 1500)
+  computed: {
+    hasSocialLinks() {
+      if (!this.systemData) return false;
+      return this.systemData.facebook || this.systemData.twitter ||
+             this.systemData.instagram || this.systemData.linkedin ||
+             this.systemData.youtube;
+    }
+  },
+
+  mounted() {
+    this.fetchSystemData();
+    this.fetchCountries();
+  },
+
+  methods: {
+    async fetchSystemData() {
+      this.systemLoading = true;
+      try {
+        const response = await axios.get(process.env.VUE_APP_BASE_API+'/system');
+        if (response.data && response.data.system) {
+          this.systemData = response.data.system;
+        }
+      } catch (error) {
+        console.error('Error fetching system data:', error);
+      } finally {
+        this.systemLoading = false;
+      }
+    },
+
+    async fetchCountries() {
+      try {
+        const response = await axios.get(process.env.VUE_APP_BASE_API+'/system/countries');
+        if (response.data && response.data.countries) {
+          this.countries = response.data.countries;
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    },
+
+    async submitForm() {
+      this.isSubmitting = true;
+      this.formError = null;
+
+      try {
+        // Build the full name and payload matching the backend expectations
+        const payload = {
+          name: `${this.formData.firstName} ${this.formData.lastName}`.trim(),
+          email: this.formData.email,
+          phone: this.formData.phone,
+          subject: this.formData.subject,
+          preferred_country: this.formData.preferred_country || null,
+          message: this.formData.message,
+          send_updates: this.formData.send_updates ? '1' : '0',
+          terms_conditions: this.formData.terms_conditions ? '1' : '0'
+        };
+
+        const response = await axios.post(process.env.VUE_APP_BASE_API+'/contact', payload);
+
+        if (response.status === 201) {
+          this.submittedEmail = this.formData.email;
+          this.showSuccessModal = true;
+          this.resetForm();
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+
+        if (error.response) {
+          if (error.response.status === 422) {
+            // Validation errors
+            const errors = error.response.data.errors;
+            if (errors) {
+              const messages = Object.values(errors).flat();
+              this.formError = messages.join(', ');
+            } else {
+              this.formError = error.response.data.message || 'Validation failed. Please check your inputs.';
+            }
+          } else {
+            this.formError = error.response.data.message || 'An error occurred. Please try again.';
+          }
+        } else if (error.request) {
+          this.formError = 'Unable to connect to server. Please check your connection.';
+        } else {
+          this.formError = 'An unexpected error occurred. Please try again.';
+        }
+      } finally {
+        this.isSubmitting = false;
+      }
     },
 
     resetForm() {
@@ -487,19 +547,16 @@ export default {
         email: '',
         phone: '',
         subject: '',
-        country: '',
+        preferred_country: '',
         message: '',
-        newsletter: false,
-        agreeToTerms: false
-      }
+        send_updates: false,
+        terms_conditions: false
+      };
+      this.formError = null;
     },
 
     closeModal() {
-      this.showSuccessModal = false
-    },
-
-    toggleFaq(index) {
-      this.activeFaq = this.activeFaq === index ? null : index
+      this.showSuccessModal = false;
     }
   }
 }
@@ -625,27 +682,13 @@ export default {
   animation: fly 3s ease-in-out infinite;
 }
 
-.plane-1 {
-  animation-delay: 0s;
-}
-
-.plane-2 {
-  animation-delay: 1s;
-}
-
-.plane-3 {
-  animation-delay: 2s;
-}
+.plane-1 { animation-delay: 0s; }
+.plane-2 { animation-delay: 1s; }
+.plane-3 { animation-delay: 2s; }
 
 @keyframes fly {
-  0%, 100% {
-    transform: translate(0, 0);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(20px, -20px);
-    opacity: 1;
-  }
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  50% { transform: translate(20px, -20px); opacity: 1; }
 }
 
 /* Main Contact Section */
@@ -660,7 +703,7 @@ export default {
   gap: 60px;
 }
 
-/* Left Side - Contact Info */
+/* Left Side */
 .contact-info-side {
   display: flex;
   flex-direction: column;
@@ -730,83 +773,117 @@ export default {
 .card-content p {
   font-size: 15px;
   color: #6B7280;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
 .card-content a {
   color: #1E40AF;
   text-decoration: none;
   transition: color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .card-content a:hover {
   color: #EF4444;
 }
 
+.whatsapp-link {
+  color: #25D366 !important;
+}
+
+.whatsapp-link:hover {
+  color: #128C7E !important;
+}
+
 .availability {
   display: block;
   font-size: 13px;
   color: #9CA3AF;
+  margin-top: 6px;
+}
+
+/* Social Icons */
+.social-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
 
-/* Map */
-.map-container {
-  background: white;
+.social-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.social-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.social-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.social-icon.facebook { background: #1877F2; }
+.social-icon.twitter { background: #1DA1F2; }
+.social-icon.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.social-icon.linkedin { background: #0A66C2; }
+.social-icon.youtube { background: #FF0000; }
+
+/* Skeleton Loading */
+.skeleton-card {
+  border: none !important;
+  cursor: default;
+  transform: none !important;
+  pointer-events: none;
+}
+
+.skeleton-icon {
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  flex-shrink: 0;
 }
 
-.map-placeholder {
-  position: relative;
-  height: 300px;
-}
-
-.map-svg {
-  width: 100%;
-  height: 100%;
-}
-
-.map-overlay {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.skeleton-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  justify-content: center;
 }
 
-.map-overlay svg {
-  width: 24px;
-  height: 24px;
-  color: #EF4444;
+.skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  width: 100%;
 }
 
-.map-overlay span {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1E3A8A;
+.skeleton-line.short { width: 40%; height: 16px; }
+.skeleton-line.medium { width: 70%; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-.map-link {
-  color: #1E40AF;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: color 0.3s;
-}
-
-.map-link:hover {
-  color: #EF4444;
-}
-
-/* Right Side - Contact Form */
+/* Right Side - Form */
 .contact-form-side {
   display: flex;
   flex-direction: column;
@@ -831,7 +908,32 @@ export default {
   font-size: 15px;
   color: #6B7280;
   line-height: 1.6;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-error {
+  background: #FEE2E2;
+  border: 1px solid #EF4444;
+  color: #991B1B;
 }
 
 .contact-form {
@@ -856,13 +958,10 @@ export default {
   font-weight: 600;
   color: #374151;
   margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
-.label-icon {
-  font-size: 16px;
+.required {
+  color: #EF4444;
 }
 
 .form-group input,
@@ -874,6 +973,7 @@ export default {
   font-size: 15px;
   transition: all 0.3s ease;
   font-family: inherit;
+  color: #1f2937;
 }
 
 .form-group input:focus,
@@ -882,6 +982,14 @@ export default {
   outline: none;
   border-color: #1E40AF;
   box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .form-group textarea {
@@ -896,6 +1004,11 @@ export default {
   margin-top: 4px;
 }
 
+.char-count.near-limit {
+  color: #EF4444;
+  font-weight: 600;
+}
+
 .checkbox-group {
   flex-direction: row;
   align-items: flex-start;
@@ -903,10 +1016,10 @@ export default {
 }
 
 .checkbox-group input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
-  margin-top: 2px;
+  margin-top: 3px;
   flex-shrink: 0;
 }
 
@@ -916,6 +1029,7 @@ export default {
   color: #6B7280;
   cursor: pointer;
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .checkbox-group a {
@@ -945,6 +1059,12 @@ export default {
   margin-top: 8px;
 }
 
+.submit-btn span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .submit-btn svg {
   width: 20px;
   height: 20px;
@@ -956,21 +1076,24 @@ export default {
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
+.loading-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spinner-svg {
+  width: 20px;
+  height: 20px;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* Quick Stats */
@@ -1018,21 +1141,6 @@ export default {
   margin-top: 4px;
 }
 
-/* Transitions */
-.slide-enter-active, .slide-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-enter-from, .slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-
-.slide-enter-to, .slide-leave-from {
-  opacity: 1;
-  max-height: 200px;
-}
-
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -1053,6 +1161,7 @@ export default {
   padding: 48px;
   border-radius: 20px;
   max-width: 500px;
+  width: 100%;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -1086,9 +1195,7 @@ export default {
 }
 
 @keyframes stroke {
-  100% {
-    stroke-dashoffset: 0;
-  }
+  100% { stroke-dashoffset: 0; }
 }
 
 .modal-content h3 {
@@ -1165,15 +1272,7 @@ export default {
     gap: 16px;
   }
 
-  .section-header h2 {
-    font-size: 32px;
-  }
-
   .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .social-links {
     grid-template-columns: 1fr;
   }
 

@@ -3,8 +3,8 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <h1>Country Management</h1>
-        <button class="add-btn" @click="openCreateModal">Add New Country</button>
+        <h1>Specialization Management</h1>
+        <button class="add-btn" @click="openCreateModal">Add New Specialization</button>
       </div>
 
       <!-- Filter Panel Component -->
@@ -19,13 +19,13 @@
       <!-- Loading State -->
       <div v-if="isLoading && !items.length" class="loading-container">
         <div class="spinner-large"></div>
-        <p>Loading countries...</p>
+        <p>Loading specializations...</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="hasError && !items.length" class="error-container">
         <div class="error-icon">⚠️</div>
-        <h3>Failed to Load Countries</h3>
+        <h3>Failed to Load Specializations</h3>
         <p>{{ errorMessage }}</p>
         <button class="retry-btn" @click="loadData">Retry</button>
       </div>
@@ -36,26 +36,13 @@
           :data="paginatedData"
           :columns="tableColumns"
           :actions="tableActions"
-          result-label="countries"
+          result-label="specializations"
           @action="handleAction"
           @sort="handleSort"
         >
           <!-- Custom slot for price column -->
           <template #cell-price="{ value }">
             <span class="price-value">{{ value }}</span>
-          </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
-            <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
-                class="manage-programs-btn"
-              >
-                Manage Programs
-              </router-link>
-            </div>
           </template>
         </DataTable>
 
@@ -65,7 +52,7 @@
           :total-items="filteredData.length"
           :page-size="itemsPerPage"
           :page-size-options="[5, 10, 20, 50]"
-          item-label="countries"
+          item-label="specializations"
           :show-first-last="true"
           :show-jump-to="true"
           @update:page-size="handlePageSizeChange"
@@ -78,7 +65,7 @@
     <BaseModal
       v-model="showFormModal"
       :mode="modalMode"
-      entity-name="country"
+      entity-name="specialization"
       :fields="formFields"
       :initial-data="selectedService"
       :on-submit="handleFormSubmit"
@@ -91,10 +78,10 @@
     <BaseModal
       v-model="showDeleteModal"
       mode="delete"
-      entity-name="country"
+      entity-name="specialization"
       :initial-data="selectedService"
       :on-submit="handleDeleteSubmit"
-      delete-message="This country will be permanently removed from the system."
+      delete-message="This specialization will be permanently removed from the system."
       @success="handleDeleteSuccess"
       @error="handleModalError"
     />
@@ -103,7 +90,7 @@
     <BaseModal
       v-model="showViewModal"
       mode="view"
-      entity-name="country"
+      entity-name="specialization"
       :fields="formFields"
       :initial-data="selectedService"
       size="large"
@@ -190,18 +177,10 @@ const sortConfig = ref({ by: '', order: 'asc' });
 const formFields = [
   {
     name: 'name',
-    label: 'Country Name',
+    label: 'Specialization Name',
     type: 'text',
     required: true,
-    placeholder: 'Enter country name...',
-    description: 'The name of the country as it will appear to customers'
-  },
-  {
-    name: 'flag',
-    label: 'Flag',
-    type: 'file',
-    required: false,
-    accept: 'image/*'
+    placeholder: 'Enter Specialization name...'
   },
   {
     name: 'status',
@@ -225,12 +204,12 @@ const formFields = [
 
 // Filter fields configuration
 const filterFields = [
-  // {
-  //   name: 'name',
-  //   label: 'Country Name',
-  //   type: 'text',
-  //   placeholder: 'Enter country name...'
-  // },
+  {
+    name: 'name',
+    label: 'Specialization',
+    type: 'text',
+    placeholder: 'Enter specialization name...'
+  },
   {
     name: 'status',
     label: 'Status',
@@ -257,21 +236,8 @@ const tableColumns = [
   },
   {
     key: 'name',
-    label: 'Country Name',
+    label: 'Specialization Name',
     sortable: true
-  },
-  {
-    key: 'flag',
-    label: 'Flag',
-    type: 'image',
-    sortable: false,
-    width: '80px' 
-  },
-  {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
-    sortable: false
   },
   {
     key: 'status',
@@ -376,7 +342,7 @@ const loadData = async () => {
     params.sort_order = sortConfig.value.order;
   }
   
-  const result = await crudStore.fetchAll('/admin/countries', params);
+  const result = await crudStore.fetchAll('/admin/specializations', params);
   
   if (!result.success) {
     showNotification('error', 'Failed to load countries', {
@@ -394,7 +360,7 @@ const openCreateModal = () => {
 
 const openEditModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/specializations/', service.id);
   
   if (result.success) {
     modalMode.value = 'edit';
@@ -414,7 +380,7 @@ const openDeleteModal = (service) => {
 
 const openViewModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/specializations/', service.id);
   
   if (result.success) {
     selectedService.value = { ...result.data };
@@ -453,13 +419,13 @@ const handleFormSubmit = async (data, mode, initialData) => {
     // FormData already created by BaseModal, use it directly
     if (mode === 'create') {
       console.log('Sending CREATE request');
-      result = await crudStore.create('/admin/countries', data);
+      result = await crudStore.create('/admin/specializations', data);
     } else {
       // For update, add ID and _method
       data.append('id', initialData.id);
       data.append('_method', 'PUT');
       console.log('Sending UPDATE request');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, data);
+      result = await crudStore.post(`/admin/specializations/${initialData.id}`, data);
     }
   } else {
     // BaseModal sent plain object
@@ -485,11 +451,11 @@ const handleFormSubmit = async (data, mode, initialData) => {
     });
     
     if (mode === 'create') {
-      result = await crudStore.create('/admin/countries', formData);
+      result = await crudStore.create('/admin/specializations', formData);
     } else {
       formData.append('id', initialData.id);
       formData.append('_method', 'PUT');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, formData);
+      result = await crudStore.post(`/admin/specializations/${initialData.id}`, formData);
     }
   }
   
@@ -505,7 +471,7 @@ const handleFormSubmit = async (data, mode, initialData) => {
 
 // Delete submit handler
 const handleDeleteSubmit = async (data) => {
-  const result = await crudStore.delete('/admin/countries/', data.id);
+  const result = await crudStore.delete('/admin/specializations/', data.id);
   
   if (!result.success) {
     throw new Error(result.error.message);
@@ -815,50 +781,6 @@ onBeforeUnmount(() => {
   
   .dashboard {
     padding: 10px;
-  }
-}
-
-
-/* Programs Cell Styles */
-.programs-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.programs-count {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manage-programs-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.manage-programs-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-@media (max-width: 768px) {
-  .programs-cell {
-    width: 100%;
-  }
-  
-  .manage-programs-btn {
-    width: 100%;
   }
 }
 </style>

@@ -3,8 +3,8 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <h1>Country Management</h1>
-        <button class="add-btn" @click="openCreateModal">Add New Country</button>
+        <h1>0ffer Management</h1>
+        <button class="add-btn" @click="openCreateModal">Add New 0ffer</button>
       </div>
 
       <!-- Filter Panel Component -->
@@ -43,19 +43,6 @@
           <!-- Custom slot for price column -->
           <template #cell-price="{ value }">
             <span class="price-value">{{ value }}</span>
-          </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
-            <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
-                class="manage-programs-btn"
-              >
-                Manage Programs
-              </router-link>
-            </div>
           </template>
         </DataTable>
 
@@ -189,63 +176,30 @@ const sortConfig = ref({ by: '', order: 'asc' });
 // Form fields configuration
 const formFields = [
   {
-    name: 'name',
-    label: 'Country Name',
+    name: 'offer_details',
+    label: 'Offer Details',
     type: 'text',
     required: true,
     placeholder: 'Enter country name...',
     description: 'The name of the country as it will appear to customers'
   },
   {
-    name: 'flag',
-    label: 'Flag',
+    name: 'icon',
+    label: 'Icon',
     type: 'file',
     required: false,
     accept: 'image/*'
-  },
-  {
-    name: 'status',
-    label: 'Status',
-    type: 'radio',
-    required: true,
-    default: 'active',
-    options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' }
-    ]
-  },
-  {
-    name: 'short_description',
-    label: 'Short Description',
-    type: 'textarea',
-    placeholder: 'Enter country description...',
-    rows: 4
   }
 ];
 
 // Filter fields configuration
 const filterFields = [
   // {
-  //   name: 'name',
+  //   name: 'countryName',
   //   label: 'Country Name',
   //   type: 'text',
   //   placeholder: 'Enter country name...'
-  // },
-  {
-    name: 'status',
-    label: 'Status',
-    type: 'select',
-    placeholder: 'All Status',
-    options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' }
-    ]
-  },
-  {
-    name: 'date',
-    label: 'Date',
-    type: 'date'
-  }
+  // }
 ];
 
 // Table configuration
@@ -256,27 +210,21 @@ const tableColumns = [
     sortable: true
   },
   {
-    key: 'name',
-    label: 'Country Name',
-    sortable: true
-  },
-  {
-    key: 'flag',
-    label: 'Flag',
+    key: 'icon',
+    label: 'Icon',
     type: 'image',
     sortable: false,
     width: '80px' 
   },
   {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
+    key: 'offer_details',
+    label: 'Offer Details',
     sortable: false
   },
   {
-    key: 'status',
-    label: 'Status',
-    type: 'status',
+    key: 'createdDate',
+    label: 'Created Date',
+    type: 'date',
     sortable: true
   },
   {
@@ -376,7 +324,7 @@ const loadData = async () => {
     params.sort_order = sortConfig.value.order;
   }
   
-  const result = await crudStore.fetchAll('/admin/countries', params);
+  const result = await crudStore.fetchAll('/admin/offers', params);
   
   if (!result.success) {
     showNotification('error', 'Failed to load countries', {
@@ -394,7 +342,7 @@ const openCreateModal = () => {
 
 const openEditModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/offers/', service.id);
   
   if (result.success) {
     modalMode.value = 'edit';
@@ -414,7 +362,7 @@ const openDeleteModal = (service) => {
 
 const openViewModal = async (service) => {
   // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/offers/', service.id);
   
   if (result.success) {
     selectedService.value = { ...result.data };
@@ -453,13 +401,13 @@ const handleFormSubmit = async (data, mode, initialData) => {
     // FormData already created by BaseModal, use it directly
     if (mode === 'create') {
       console.log('Sending CREATE request');
-      result = await crudStore.create('/admin/countries', data);
+      result = await crudStore.create('/admin/offers', data);
     } else {
       // For update, add ID and _method
       data.append('id', initialData.id);
       data.append('_method', 'PUT');
       console.log('Sending UPDATE request');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, data);
+      result = await crudStore.post(`/admin/offers/${initialData.id}`, data);
     }
   } else {
     // BaseModal sent plain object
@@ -485,11 +433,11 @@ const handleFormSubmit = async (data, mode, initialData) => {
     });
     
     if (mode === 'create') {
-      result = await crudStore.create('/admin/countries', formData);
+      result = await crudStore.create('/admin/offers', formData);
     } else {
       formData.append('id', initialData.id);
       formData.append('_method', 'PUT');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, formData);
+      result = await crudStore.post(`/admin/offers/${initialData.id}`, formData);
     }
   }
   
@@ -505,7 +453,7 @@ const handleFormSubmit = async (data, mode, initialData) => {
 
 // Delete submit handler
 const handleDeleteSubmit = async (data) => {
-  const result = await crudStore.delete('/admin/countries/', data.id);
+  const result = await crudStore.delete('/admin/offers/', data.id);
   
   if (!result.success) {
     throw new Error(result.error.message);
@@ -815,50 +763,6 @@ onBeforeUnmount(() => {
   
   .dashboard {
     padding: 10px;
-  }
-}
-
-
-/* Programs Cell Styles */
-.programs-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.programs-count {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manage-programs-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.manage-programs-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-@media (max-width: 768px) {
-  .programs-cell {
-    width: 100%;
-  }
-  
-  .manage-programs-btn {
-    width: 100%;
   }
 }
 </style>

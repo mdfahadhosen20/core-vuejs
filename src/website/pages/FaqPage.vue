@@ -15,36 +15,11 @@
           <p class="hero-description">
             Find answers to common questions about studying abroad, our services, and the application process
           </p>
-          
-          <!-- Search Bar -->
-          <!-- <div class="search-container">
-            <div class="search-box">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="Search for questions..."
-                class="search-input"
-              />
-              <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-            <p class="search-hint" v-if="searchQuery && filteredFaqs.length === 0">
-              No results found for "{{ searchQuery }}". Try different keywords.
-            </p>
-          </div> -->
 
           <!-- Quick Stats -->
           <div class="quick-stats">
             <div class="stat-item">
-              <span class="stat-number">{{ categories.length }}</span>
+              <span class="stat-number">{{ categoryCount }}</span>
               <span class="stat-label">Categories</span>
             </div>
             <div class="stat-item">
@@ -60,8 +35,18 @@
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-section">
+      <div class="container">
+        <div class="loading-content">
+          <div class="spinner-large"></div>
+          <p>Loading FAQs...</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Category Filters -->
-    <div class="category-section">
+    <div v-else-if="!loading && categoryCount > 0" class="category-section">
       <div class="container">
         <div class="category-tabs">
           <button 
@@ -85,16 +70,28 @@
           >
             <span class="category-emoji">{{ category.emoji }}</span>
             {{ category.name }}
-            <span class="count">{{ category.questions.length }}</span>
+            <span class="count">{{ category.count }}</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- FAQ Content -->
-    <div class="faq-content-section">
+    <div v-if="!loading" class="faq-content-section">
       <div class="container">
-        <transition-group name="fade-slide" tag="div" class="faq-list">
+        <!-- No FAQs State -->
+        <div v-if="categoryCount === 0" class="no-results">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h3>No FAQs Available</h3>
+          <p>FAQs will be added soon. Check back later!</p>
+        </div>
+
+        <!-- FAQ List -->
+        <transition-group v-else name="fade-slide" tag="div" class="faq-list">
           <div 
             v-for="(faq, index) in displayedFaqs" 
             :key="faq.id"
@@ -104,7 +101,7 @@
             <div class="faq-question" @click="toggleFaq(faq.id)">
               <div class="question-content">
                 <span class="question-number">{{ index + 1 }}</span>
-                <h3 v-html="highlightSearchTerm(faq.question)"></h3>
+                <h3>{{ faq.question }}</h3>
               </div>
               <div class="faq-controls">
                 <span class="category-badge">{{ faq.categoryName }}</span>
@@ -115,7 +112,7 @@
             </div>
             <transition name="expand">
               <div v-if="activeFaq === faq.id" class="faq-answer">
-                <div class="answer-content" v-html="highlightSearchTerm(faq.answer)"></div>
+                <div class="answer-content">{{ faq.answer }}</div>
                 <div class="answer-footer">
                   <button class="helpful-btn" @click.stop="markHelpful(faq.id)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,7 +127,8 @@
           </div>
         </transition-group>
 
-        <div v-if="displayedFaqs.length === 0 && !searchQuery" class="no-results">
+        <!-- Empty Category -->
+        <div v-if="displayedFaqs.length === 0 && categoryCount > 0" class="no-results">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
@@ -142,38 +140,8 @@
       </div>
     </div>
 
-    <!-- Popular Topics -->
-    <!-- <div class="popular-topics-section">
-      <div class="container">
-        <div class="section-header">
-          <h2>Popular Topics</h2>
-          <p>Quick links to the most searched topics</p>
-        </div>
-
-        <div class="topics-grid">
-          <div 
-            v-for="topic in popularTopics" 
-            :key="topic.id"
-            class="topic-card"
-            @click="searchForTopic(topic.keyword)"
-          >
-            <div class="topic-icon">{{ topic.emoji }}</div>
-            <h4>{{ topic.title }}</h4>
-            <p>{{ topic.description }}</p>
-            <div class="topic-footer">
-              <span class="question-count">{{ topic.questionCount }} questions</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> -->
-
     <!-- Still Have Questions -->
-    <div class="contact-cta-section">
+    <div v-if="!loading" class="contact-cta-section">
       <div class="container">
         <div class="cta-card">
           <div class="cta-content">
@@ -188,14 +156,24 @@
             </div>
           </div>
           <div class="cta-buttons">
-            <button class="cta-btn primary" @click="goToContact">
+            <router-link to="/contact" class="cta-btn primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
               Contact Us
-            </button>
-            <button class="cta-btn secondary" @click="bookConsultation">
+            </router-link>
+            <a 
+              v-if="systemSettings.phone" 
+              :href="`tel:${systemSettings.phone}`" 
+              class="cta-btn secondary"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              Call Us Now
+            </a>
+            <router-link v-else to="/contact" class="cta-btn secondary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                 <line x1="16" y1="2" x2="16" y2="6"/>
@@ -203,7 +181,7 @@
                 <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
               Book Free Consultation
-            </button>
+            </router-link>
           </div>
         </div>
       </div>
@@ -211,351 +189,141 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'FAQPage',
-  data() {
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
+
+// API Configuration
+const apiBase = ref(process.env.VUE_APP_BASE_API);
+
+// State
+const loading = ref(true);
+const selectedCategory = ref('all');
+const activeFaq = ref(null);
+const faqData = ref({});
+const systemSettings = ref({
+  phone: ''
+});
+
+// Category metadata for icons/emojis
+const categoryMetadata = {
+  general: { emoji: '💼', name: 'General' },
+  application: { emoji: '📝', name: 'Application Process' },
+  tests: { emoji: '📊', name: 'Tests & Scores' },
+  visa: { emoji: '✈️', name: 'Visa & Immigration' },
+  financial: { emoji: '💰', name: 'Finances & Scholarships' },
+  country: { emoji: '🌍', name: 'Country-Specific' },
+  admission: { emoji: '🎓', name: 'Admissions' },
+  scholarship: { emoji: '💵', name: 'Scholarships' },
+  accommodation: { emoji: '🏠', name: 'Accommodation' },
+  services: { emoji: '🛠️', name: 'Our Services' }
+};
+
+// Computed
+const categories = computed(() => {
+  return Object.keys(faqData.value).map(categoryId => {
+    const metadata = categoryMetadata[categoryId] || { emoji: '📌', name: formatCategoryName(categoryId) };
     return {
-      searchQuery: '',
-      selectedCategory: 'all',
-      activeFaq: null,
-      
-      categories: [
-        {
-          id: 'general',
-          name: 'General',
-          emoji: '💼',
-          questions: [
-            {
-              id: 1,
-              question: 'What services does StudentConsult provide?',
-              answer: 'StudentConsult offers comprehensive study abroad services including university selection, application assistance, test preparation (IELTS, TOEFL, GRE, GMAT), visa processing, scholarship guidance, and pre-departure support. We also provide career counseling and help with accommodation arrangements.',
-              helpfulCount: 145
-            },
-            {
-              id: 2,
-              question: 'How much do your services cost?',
-              answer: 'Our first consultation is completely free! After that, we offer flexible packages based on your needs. Our basic package starts at $500 for application assistance, while comprehensive packages including test prep and visa support range from $1,500-$3,000. We also offer payment plans to make our services accessible.',
-              helpfulCount: 98
-            },
-            {
-              id: 3,
-              question: 'How long does the entire process take?',
-              answer: 'The timeline varies depending on your chosen program and country. Generally, the process takes 6-12 months from initial consultation to departure. This includes 2-3 months for test preparation, 3-4 months for applications, 1-2 months for visa processing, and additional time for pre-departure preparations.',
-              helpfulCount: 87
-            },
-            {
-              id: 4,
-              question: 'Do you guarantee admission to universities?',
-              answer: 'While we cannot guarantee admission (as final decisions rest with universities), we have a 95% success rate. We carefully evaluate your profile, shortlist suitable universities, and ensure your application is as strong as possible. Our experienced counselors know what universities look for and guide you accordingly.',
-              helpfulCount: 76
-            }
-          ]
-        },
-        {
-          id: 'application',
-          name: 'Application Process',
-          emoji: '📝',
-          questions: [
-            {
-              id: 11,
-              question: 'What documents do I need for university applications?',
-              answer: 'Typically, you\'ll need: academic transcripts and certificates, English proficiency test scores (IELTS/TOEFL), standardized test scores (GRE/GMAT for graduate programs), letters of recommendation (2-3), statement of purpose, resume/CV, passport copy, and financial documents. Specific requirements vary by university and program.',
-              helpfulCount: 156
-            },
-            {
-              id: 12,
-              question: 'How many universities should I apply to?',
-              answer: 'We recommend applying to 6-8 universities: 2-3 "dream" schools (reach), 3-4 "target" schools (match), and 1-2 "safety" schools. This strategy balances ambition with practicality and increases your chances of admission while managing application costs.',
-              helpfulCount: 123
-            },
-            {
-              id: 13,
-              question: 'Can you help write my Statement of Purpose (SOP)?',
-              answer: 'Yes! Our expert writers work closely with you to craft a compelling SOP that highlights your unique story, achievements, and goals. We don\'t write it for you, but guide you through multiple drafts, providing feedback and suggestions to make it authentic and impactful.',
-              helpfulCount: 134
-            },
-            {
-              id: 14,
-              question: 'What are application deadlines?',
-              answer: 'Deadlines vary by country and university. For Fall intake (September/October start): US universities typically have deadlines from December to February; Canada from January to March; UK from January to June; Malaysia has rolling admissions. Spring intake deadlines are usually 6 months earlier. We help you track and meet all deadlines.',
-              helpfulCount: 92
-            },
-            {
-              id: 15,
-              question: 'How do I get strong letters of recommendation?',
-              answer: 'Choose recommenders who know you well academically or professionally - professors, supervisors, or mentors. Ask them at least 2 months in advance, provide your resume and key achievements, explain your goals, and offer to draft points they could include. We provide templates and guidance on this process.',
-              helpfulCount: 88
-            }
-          ]
-        },
-        {
-          id: 'tests',
-          name: 'Tests & Scores',
-          emoji: '📊',
-          questions: [
-            {
-              id: 21,
-              question: 'Which English test should I take - IELTS or TOEFL?',
-              answer: 'Both are widely accepted. IELTS is more popular for UK, Canada, and Australia, while TOEFL is preferred by US universities. IELTS includes a face-to-face speaking test, while TOEFL is computer-based. Consider your strengths and target country. We offer preparation courses for both.',
-              helpfulCount: 167
-            },
-            {
-              id: 22,
-              question: 'What is a competitive GRE/GMAT score?',
-              answer: 'For GRE: Top universities typically expect 320+ (out of 340), good universities 310-320, and average programs 300-310. For GMAT: Top MBA programs look for 700+, good programs 650-700, average programs 600-650. However, a holistic profile matters more than just test scores.',
-              helpfulCount: 143
-            },
-            {
-              id: 23,
-              question: 'How long should I prepare for these tests?',
-              answer: 'We recommend 2-3 months of dedicated preparation for English tests (IELTS/TOEFL) and 3-4 months for GRE/GMAT. This includes learning test strategies, practicing regularly, and taking mock tests. Our structured preparation programs optimize your study time.',
-              helpfulCount: 98
-            },
-            {
-              id: 24,
-              question: 'Can I apply without GRE/GMAT scores?',
-              answer: 'Yes! Many universities now offer GRE/GMAT waivers, especially post-COVID. Requirements vary by program and your profile. Some programs waive scores for applicants with strong work experience, high GPAs, or from certain undergraduate institutions. We help identify such programs.',
-              helpfulCount: 112
-            }
-          ]
-        },
-        {
-          id: 'visa',
-          name: 'Visa & Immigration',
-          emoji: '✈️',
-          questions: [
-            {
-              id: 31,
-              question: 'How long does visa processing take?',
-              answer: 'Processing times vary by country: USA (F-1 visa): 3-5 weeks; Canada (Study Permit): 4-8 weeks; UK (Student visa): 3 weeks; Malaysia (Student Pass): 6-8 weeks. We recommend applying as soon as you receive your admission letter. Our visa experts guide you through every step.',
-              helpfulCount: 178
-            },
-            {
-              id: 32,
-              question: 'What are the chances of visa rejection?',
-              answer: 'With proper documentation and preparation, rejection rates are low (5-10%). Common reasons for rejection include insufficient financial proof, unclear study plans, or poor interview performance. Our 95% visa success rate reflects our thorough preparation and interview coaching.',
-              helpfulCount: 156
-            },
-            {
-              id: 33,
-              question: 'What financial documents are needed for visa?',
-              answer: 'You\'ll need: bank statements (typically 6-12 months), proof of funds covering tuition and living expenses, sponsor letters (if applicable), loan sanction letters, property documents, income tax returns, and employment letters. Exact requirements vary by country and we provide detailed checklists.',
-              helpfulCount: 134
-            },
-            {
-              id: 34,
-              question: 'Can I work while studying?',
-              answer: 'Most countries allow part-time work: USA: 20 hours/week on-campus; Canada: 20 hours/week during term, full-time during breaks; UK: 20 hours/week during term; Malaysia: 20 hours/week during semester breaks. Post-study work options vary - we provide detailed guidance on work rights.',
-              helpfulCount: 189
-            },
-            {
-              id: 35,
-              question: 'Do you help with visa interview preparation?',
-              answer: 'Absolutely! We conduct mock interviews, provide sample questions, teach effective communication strategies, and help you prepare confident, honest answers. We also brief you on what visa officers look for and common mistakes to avoid.',
-              helpfulCount: 121
-            }
-          ]
-        },
-        {
-          id: 'financial',
-          name: 'Finances & Scholarships',
-          emoji: '💰',
-          questions: [
-            {
-              id: 41,
-              question: 'What is the average cost of studying abroad?',
-              answer: 'Costs vary significantly: USA: $30,000-$60,000/year; Canada: $20,000-$35,000/year; UK: £15,000-£35,000/year; Malaysia: $5,000-$15,000/year. This includes tuition and living expenses. We help you budget effectively and find affordable options without compromising quality.',
-              helpfulCount: 198
-            },
-            {
-              id: 42,
-              question: 'How can I get scholarships?',
-              answer: 'Scholarships are available based on merit, need, sports, diversity, or field of study. Apply early (8-12 months before intake), maintain strong academics, demonstrate leadership, and craft compelling essays. We help identify suitable scholarships and assist with applications. Our students have won over $5M in scholarships.',
-              helpfulCount: 223
-            },
-            {
-              id: 43,
-              question: 'Can I get education loans?',
-              answer: 'Yes! Many banks offer education loans covering tuition, living expenses, and travel. In most countries, you can get loans without collateral up to a certain amount. Interest rates vary (typically 8-12%). We have partnerships with banks and help with loan applications and documentation.',
-              helpfulCount: 167
-            },
-            {
-              id: 44,
-              question: 'Are there fully-funded scholarships available?',
-              answer: 'Yes! Fully-funded scholarships covering tuition, living expenses, and even travel exist, especially for PhD programs. Examples include Fulbright (USA), Chevening (UK), Australia Awards, and university-specific fellowships. These are highly competitive but we help qualified candidates apply strategically.',
-              helpfulCount: 201
-            }
-          ]
-        },
-        {
-          id: 'country',
-          name: 'Country-Specific',
-          emoji: '🌍',
-          questions: [
-            {
-              id: 51,
-              question: 'Which country is best for studying Computer Science?',
-              answer: 'USA leads in Computer Science with Silicon Valley proximity, top universities (MIT, Stanford, Carnegie Mellon), and excellent job opportunities. Canada offers quality education at lower costs with good immigration pathways. UK provides intensive 1-year master\'s programs. Choice depends on your budget, career goals, and immigration plans.',
-              helpfulCount: 187
-            },
-            {
-              id: 52,
-              question: 'Can I stay and work after graduation?',
-              answer: 'Post-study work options: USA: OPT (1 year, 3 years for STEM); Canada: PGWP (up to 3 years); UK: Graduate Route (2 years, 3 for PhD); Malaysia: limited. Canada and UK offer easier pathways to permanent residency. We advise on long-term immigration strategies.',
-              helpfulCount: 234
-            },
-            {
-              id: 53,
-              question: 'Is it safe for international students?',
-              answer: 'All our partner countries - USA, Canada, UK, and Malaysia - are generally safe with strong support systems for international students. Universities provide campus security, international student services, and 24/7 emergency support. We also provide pre-departure orientations covering safety and cultural adaptation.',
-              helpfulCount: 143
-            },
-            {
-              id: 54,
-              question: 'What about cultural differences and homesickness?',
-              answer: 'Cultural adjustment is normal and takes 2-3 months. Universities have international student communities, cultural clubs, and counseling services. We provide cultural orientation, connect you with alumni in your destination, and maintain contact to support you through the transition.',
-              helpfulCount: 98
-            }
-          ]
-        }
-      ],
+      id: categoryId,
+      name: metadata.name,
+      emoji: metadata.emoji,
+      count: faqData.value[categoryId]?.length || 0
+    };
+  }).filter(cat => cat.count > 0);
+});
 
-      popularTopics: [
-        {
-          id: 1,
-          emoji: '🎓',
-          title: 'Admission Requirements',
-          description: 'Learn about eligibility criteria and documents needed',
-          keyword: 'admission requirements documents',
-          questionCount: 8
-        },
-        {
-          id: 2,
-          emoji: '💵',
-          title: 'Scholarships & Funding',
-          description: 'Explore financial aid and scholarship opportunities',
-          keyword: 'scholarship funding',
-          questionCount: 6
-        },
-        {
-          id: 3,
-          emoji: '📋',
-          title: 'Visa Process',
-          description: 'Everything about student visa applications',
-          keyword: 'visa',
-          questionCount: 7
-        },
-        {
-          id: 4,
-          emoji: '⏰',
-          title: 'Timeline & Deadlines',
-          description: 'Application timelines and important dates',
-          keyword: 'timeline deadline',
-          questionCount: 5
-        },
-        {
-          id: 5,
-          emoji: '🏆',
-          title: 'Test Preparation',
-          description: 'IELTS, TOEFL, GRE, GMAT guidance',
-          keyword: 'test preparation GRE IELTS',
-          questionCount: 6
-        },
-        {
-          id: 6,
-          emoji: '🌟',
-          title: 'After Graduation',
-          description: 'Post-study work and immigration options',
-          keyword: 'work after graduation',
-          questionCount: 4
-        }
-      ]
-    }
-  },
+const categoryCount = computed(() => {
+  return categories.value.length;
+});
 
-  computed: {
-    allFaqs() {
-      let faqs = []
-      this.categories.forEach(category => {
-        category.questions.forEach(question => {
-          faqs.push({
-            ...question,
-            categoryId: category.id,
-            categoryName: category.name
-          })
-        })
-      })
-      return faqs
-    },
+const allFaqs = computed(() => {
+  let faqs = [];
+  Object.keys(faqData.value).forEach(categoryId => {
+    const categoryMeta = categories.value.find(c => c.id === categoryId);
+    const categoryName = categoryMeta ? categoryMeta.name : formatCategoryName(categoryId);
+    
+    faqData.value[categoryId].forEach(faq => {
+      faqs.push({
+        ...faq,
+        categoryId: categoryId,
+        categoryName: categoryName,
+        helpfulCount: faq.helpfulCount || 0
+      });
+    });
+  });
+  return faqs;
+});
 
-    filteredFaqs() {
-      let faqs = this.selectedCategory === 'all' 
-        ? this.allFaqs 
-        : this.allFaqs.filter(faq => faq.categoryId === this.selectedCategory)
-
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase()
-        faqs = faqs.filter(faq => 
-          faq.question.toLowerCase().includes(query) || 
-          faq.answer.toLowerCase().includes(query)
-        )
-      }
-
-      return faqs
-    },
-
-    displayedFaqs() {
-      return this.filteredFaqs
-    },
-
-    totalQuestions() {
-      return this.allFaqs.length
-    }
-  },
-
-  methods: {
-    toggleFaq(id) {
-      this.activeFaq = this.activeFaq === id ? null : id
-    },
-
-    selectCategory(categoryId) {
-      this.selectedCategory = categoryId
-      this.activeFaq = null
-    },
-
-    markHelpful(id) {
-      const faq = this.allFaqs.find(f => f.id === id)
-      if (faq) {
-        faq.helpfulCount = (faq.helpfulCount || 0) + 1
-      }
-    },
-
-    searchForTopic(keyword) {
-      this.searchQuery = keyword
-      this.selectedCategory = 'all'
-      window.scrollTo({ top: 400, behavior: 'smooth' })
-    },
-
-    highlightSearchTerm(text) {
-      if (!this.searchQuery) return text
-      
-      const query = this.searchQuery.trim()
-      const regex = new RegExp(`(${query})`, 'gi')
-      return text.replace(regex, '<mark>$1</mark>')
-    },
-
-    goToContact() {
-      // Navigate to contact page
-      console.log('Navigate to contact page')
-    },
-
-    bookConsultation() {
-      // Navigate to booking page
-      console.log('Navigate to consultation booking')
-    }
+const displayedFaqs = computed(() => {
+  if (selectedCategory.value === 'all') {
+    return allFaqs.value;
   }
-}
+  return allFaqs.value.filter(faq => faq.categoryId === selectedCategory.value);
+});
+
+const totalQuestions = computed(() => {
+  return allFaqs.value.length;
+});
+
+// Methods
+const loadFaqs = async () => {
+  loading.value = true;
+  try {
+    const response = await axios.get(`${apiBase.value}/faqs`);
+    if (response.data && response.data.faqs) {
+      faqData.value = response.data.faqs;
+    }
+  } catch (error) {
+    console.error('Failed to load FAQs:', error);
+    faqData.value = {};
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadSystemSettings = async () => {
+  try {
+    const response = await axios.get(`${apiBase.value}/system`);
+    if (response.data && response.data.system) {
+      systemSettings.value = response.data.system;
+    }
+  } catch (error) {
+    console.error('Failed to load system settings:', error);
+  }
+};
+
+const formatCategoryName = (categoryId) => {
+  // Convert snake_case or kebab-case to Title Case
+  return categoryId
+    .replace(/[_-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const toggleFaq = (id) => {
+  activeFaq.value = activeFaq.value === id ? null : id;
+};
+
+const selectCategory = (categoryId) => {
+  selectedCategory.value = categoryId;
+  activeFaq.value = null;
+};
+
+const markHelpful = (id) => {
+  const faq = allFaqs.value.find(f => f.id === id);
+  if (faq) {
+    faq.helpfulCount = (faq.helpfulCount || 0) + 1;
+    // Optionally, you could send this to the backend
+    // axios.post(`${apiBase.value}/api/faqs/${id}/helpful`)
+  }
+};
+
+// Lifecycle
+onMounted(() => {
+  loadFaqs();
+  loadSystemSettings();
+});
 </script>
 
 <style scoped>
@@ -657,77 +425,6 @@ export default {
   margin-bottom: 48px;
 }
 
-/* Search Bar */
-.search-container {
-  margin-bottom: 48px;
-}
-
-.search-box {
-  position: relative;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-icon {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  color: #9CA3AF;
-}
-
-.search-input {
-  width: 100%;
-  padding: 18px 60px 18px 60px;
-  border: none;
-  border-radius: 50px;
-  font-size: 16px;
-  background: white;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
-}
-
-.clear-btn {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #F3F4F6;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.clear-btn:hover {
-  background: #E5E7EB;
-}
-
-.clear-btn svg {
-  width: 16px;
-  height: 16px;
-  color: #6B7280;
-}
-
-.search-hint {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 14px;
-  opacity: 0.9;
-}
-
 /* Quick Stats */
 .quick-stats {
   display: flex;
@@ -753,6 +450,42 @@ export default {
 .stat-label {
   font-size: 14px;
   opacity: 0.9;
+}
+
+/* Loading Section */
+.loading-section {
+  padding: 80px 0;
+  background: #F9FAFB;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.spinner-large {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #1E40AF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-content p {
+  font-size: 16px;
+  color: #6B7280;
+  font-weight: 500;
 }
 
 /* Category Section */
@@ -844,7 +577,7 @@ export default {
 .faq-content-section {
   padding: 60px 0;
   background: #F9FAFB;
-  min-height: 500px;
+  /* min-height: 500px; */
 }
 
 .faq-list {
@@ -949,6 +682,7 @@ export default {
   font-size: 16px;
   color: #4B5563;
   line-height: 1.8;
+  white-space: pre-wrap;
 }
 
 .answer-footer {
@@ -989,16 +723,6 @@ export default {
   color: #9CA3AF;
 }
 
-/* Highlight Search Terms */
-.answer-content mark,
-.question-content mark {
-  background: #FEF3C7;
-  color: #92400E;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
 /* No Results */
 .no-results {
   text-align: center;
@@ -1022,90 +746,6 @@ export default {
 .no-results p {
   font-size: 16px;
   color: #9CA3AF;
-}
-
-/* Popular Topics */
-.popular-topics-section {
-  padding: 80px 0;
-  background: white;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.section-header h2 {
-  font-size: 42px;
-  font-weight: 800;
-  color: #1E3A8A;
-  margin-bottom: 16px;
-}
-
-.section-header p {
-  font-size: 18px;
-  color: #6B7280;
-}
-
-.topics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.topic-card {
-  background: #F9FAFB;
-  padding: 32px;
-  border-radius: 16px;
-  border: 2px solid #E5E7EB;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.topic-card:hover {
-  border-color: #1E40AF;
-  background: white;
-  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12);
-  transform: translateY(-4px);
-}
-
-.topic-icon {
-  font-size: 48px;
-  margin-bottom: 20px;
-}
-
-.topic-card h4 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1E3A8A;
-  margin-bottom: 12px;
-}
-
-.topic-card p {
-  font-size: 14px;
-  color: #6B7280;
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-
-.topic-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 16px;
-  border-top: 2px solid #E5E7EB;
-}
-
-.question-count {
-  font-size: 13px;
-  color: #9CA3AF;
-  font-weight: 600;
-}
-
-.topic-footer svg {
-  width: 20px;
-  height: 20px;
-  color: #1E40AF;
 }
 
 /* Contact CTA */
@@ -1195,6 +835,7 @@ export default {
   transition: all 0.3s ease;
   border: 2px solid transparent;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .cta-btn svg {
@@ -1249,15 +890,11 @@ export default {
 
 .expand-enter-to, .expand-leave-from {
   opacity: 1;
-  max-height: 600px;
+  max-height: 1000px;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .topics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .cta-card {
     flex-direction: column;
     text-align: center;
@@ -1300,23 +937,20 @@ export default {
     overflow-x: auto;
   }
 
-  .topics-grid {
-    grid-template-columns: 1fr;
-  }
-
   .faq-question {
     padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .question-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    width: 100%;
   }
 
   .faq-controls {
-    flex-direction: column;
-    align-items: flex-end;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 12px;
   }
 
   .answer-content {
@@ -1335,10 +969,6 @@ export default {
 
   .cta-text h3 {
     font-size: 24px;
-  }
-
-  .section-header h2 {
-    font-size: 32px;
   }
 }
 </style>

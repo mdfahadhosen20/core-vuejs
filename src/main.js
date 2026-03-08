@@ -3,6 +3,7 @@ import App from './App.vue'
 
 import Router from './routes/'
 import { createPinia } from 'pinia'
+import { useAppConfig } from '@/composables/useAppConfig'
 
 /* Import the FontAwesome core */
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -20,8 +21,17 @@ library.add(fas, far, fab);
 
 const pinia = createPinia()
 
-createApp(App)
-.component('font-awesome-icon', FontAwesomeIcon)
-.use(pinia)
-.use(Router)
-.mount('#app')
+const initApp = async () => {
+  // Fetch dynamic config before mounting
+  
+  const app = createApp(App)
+  .component('font-awesome-icon', FontAwesomeIcon)
+  app.use(pinia)
+  app.use(Router)
+  
+  await useAppConfig()
+  
+  app.mount('#app')
+}
+
+initApp()

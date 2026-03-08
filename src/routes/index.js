@@ -13,9 +13,21 @@ const routes = [
         meta: { layout: websiteLayout }
     },
     {
-        path: '/service/:id',
+        path: '/countries',
+        name: 'CountriesPage',
+        component: () => import('../website/pages/CountriesPage.vue'),
+        meta: { layout: websiteLayout }
+    },
+    {
+        path: '/program/:id',
         name: 'ServiceDetailsPage',
         component: () => import('../website/pages/ServiceDetailsPage.vue'),
+        meta: { layout: websiteLayout }
+    },
+    {
+        path: '/country/:id',
+        name: 'CountryDetailsPage',
+        component: () => import('../website/pages/CountryDetailsPage.vue'),
         meta: { layout: websiteLayout }
     },
     {

@@ -3,8 +3,8 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <h1>Country Management</h1>
-        <button class="add-btn" @click="openCreateModal">Add New Country</button>
+        <h1>Program Management</h1>
+        <button class="add-btn" @click="openCreateModal">Add New Program</button>
       </div>
 
       <!-- Filter Panel Component -->
@@ -19,13 +19,13 @@
       <!-- Loading State -->
       <div v-if="isLoading && !items.length" class="loading-container">
         <div class="spinner-large"></div>
-        <p>Loading countries...</p>
+        <p>Loading programs...</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="hasError && !items.length" class="error-container">
         <div class="error-icon">⚠️</div>
-        <h3>Failed to Load Countries</h3>
+        <h3>Failed to Load Programs</h3>
         <p>{{ errorMessage }}</p>
         <button class="retry-btn" @click="loadData">Retry</button>
       </div>
@@ -36,25 +36,68 @@
           :data="paginatedData"
           :columns="tableColumns"
           :actions="tableActions"
-          result-label="countries"
+          result-label="programs"
           @action="handleAction"
           @sort="handleSort"
         >
-          <!-- Custom slot for price column -->
-          <template #cell-price="{ value }">
-            <span class="price-value">{{ value }}</span>
-          </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
+          <!-- Custom slot for various columns with manage buttons -->
+          <template #cell-eligibilities="{ row, value }">
             <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
+              <span class="programs-count">{{ value || 0 }}</span>
+              <button 
                 class="manage-programs-btn"
+                @click="openManageModal(row, 'eligibilities')"
               >
-                Manage Programs
-              </router-link>
+                Manage
+              </button>
+            </div>
+          </template>
+
+          <template #cell-resources="{ row, value }">
+            <div class="programs-cell">
+              <span class="programs-count">{{ value || 0 }}</span>
+              <button 
+                class="manage-programs-btn"
+                @click="openManageModal(row, 'resources')"
+              >
+                Manage
+              </button>
+            </div>
+          </template>
+
+          <template #cell-services="{ row, value }">
+            <div class="programs-cell">
+              <span class="programs-count">{{ value || 0 }}</span>
+              <button 
+                class="manage-programs-btn"
+                @click="openManageModal(row, 'services')"
+              >
+                Manage
+              </button>
+            </div>
+          </template>
+
+          <template #cell-application-process="{ row, value }">
+            <div class="programs-cell">
+              <span class="programs-count">{{ value || 0 }}</span>
+              <button 
+                class="manage-programs-btn"
+                @click="openManageModal(row, 'application-process')"
+              >
+                Manage
+              </button>
+            </div>
+          </template>
+
+          <template #cell-specializations="{ row, value }">
+            <div class="programs-cell">
+              <span class="programs-count">{{ value || 0 }}</span>
+              <button 
+                class="manage-programs-btn"
+                @click="openManageModal(row, 'specializations')"
+              >
+                Manage
+              </button>
             </div>
           </template>
         </DataTable>
@@ -65,7 +108,7 @@
           :total-items="filteredData.length"
           :page-size="itemsPerPage"
           :page-size-options="[5, 10, 20, 50]"
-          item-label="countries"
+          item-label="programs"
           :show-first-last="true"
           :show-jump-to="true"
           @update:page-size="handlePageSizeChange"
@@ -78,7 +121,7 @@
     <BaseModal
       v-model="showFormModal"
       :mode="modalMode"
-      entity-name="country"
+      entity-name="program"
       :fields="formFields"
       :initial-data="selectedService"
       :on-submit="handleFormSubmit"
@@ -91,10 +134,10 @@
     <BaseModal
       v-model="showDeleteModal"
       mode="delete"
-      entity-name="country"
+      entity-name="program"
       :initial-data="selectedService"
       :on-submit="handleDeleteSubmit"
-      delete-message="This country will be permanently removed from the system."
+      delete-message="This program will be permanently removed from the system."
       @success="handleDeleteSuccess"
       @error="handleModalError"
     />
@@ -103,10 +146,20 @@
     <BaseModal
       v-model="showViewModal"
       mode="view"
-      entity-name="country"
+      entity-name="program"
       :fields="formFields"
       :initial-data="selectedService"
       size="large"
+    />
+
+    <!-- Program Management Modal (NEW) -->
+    <ProgramManagementModal
+      v-if="showManagementModal"
+      v-model="showManagementModal"
+      :program-id="selectedProgramId"
+      :program-name="selectedProgramName"
+      :initial-tab="selectedTab"
+      @refresh="handleManagementRefresh"
     />
 
     <!-- Notification Modal -->
@@ -124,23 +177,39 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useCrudStore } from '@/store/crud';
+import { useRoute } from 'vue-router';
+import axios from 'axios';
 import FilterPanel from '../components/FilterComponent.vue';
 import DataTable from '../components/TableComponent.vue';
 import Pagination from '../components/PaginationComponent.vue';
 import BaseModal from '../components/ActionModalComponent.vue';
 import NotificationModal from '../components/NotificationModal.vue';
+import ProgramManagementModal from './components/ProgramManagementModal.vue';
 
 // Store
 const crudStore = useCrudStore();
+const route = useRoute();
+
+// Get country ID from route
+const countryId = computed(() => route.params.id);
 
 // Modal states
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const showViewModal = ref(false);
-const modalMode = ref('create'); // 'create' or 'edit'
+const showManagementModal = ref(false);
+const modalMode = ref('create');
 const selectedService = ref({});
+
+// Management Modal State
+const selectedProgramId = ref(null);
+const selectedProgramName = ref('');
+const selectedTab = ref('services');
+
+// Program options state
+const programOptions = ref([]);
 
 // Notification state
 const notification = ref({
@@ -170,7 +239,6 @@ const showNotification = (type, message, options = {}) => {
 
 // Computed properties from store
 const items = computed(() => crudStore.getAllItems);
-// const pagination = computed(() => crudStore.getPagination);
 const isLoading = computed(() => crudStore.isLoading);
 const hasError = computed(() => crudStore.hasError);
 const errorMessage = computed(() => crudStore.getError?.message || 'An error occurred');
@@ -186,22 +254,69 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const sortConfig = ref({ by: '', order: 'asc' });
 
-// Form fields configuration
-const formFields = [
+// Form fields configuration - Updated with program select
+const formFields = computed(() => [
   {
-    name: 'name',
-    label: 'Country Name',
-    type: 'text',
+    name: 'program_id',
+    label: 'Program',
+    type: 'select',
     required: true,
-    placeholder: 'Enter country name...',
-    description: 'The name of the country as it will appear to customers'
+    placeholder: 'Select a program...',
+    options: programOptions.value,
   },
   {
-    name: 'flag',
-    label: 'Flag',
-    type: 'file',
-    required: false,
-    accept: 'image/*'
+    name: 'duration',
+    label: 'Duration',
+    type: 'text',
+    placeholder: 'e.g., 2 years',
+  },
+  {
+    name: 'partner_university_count',
+    label: 'Partner University Count',
+    type: 'number',
+    placeholder: 'Enter number of partner universities',
+  },
+  {
+    name: 'success_rate',
+    label: 'Success Rate',
+    type: 'text',
+    placeholder: 'e.g., 95%',
+  },
+  {
+    name: 'average_tution',
+    label: 'Average Tuition',
+    type: 'text',
+    placeholder: 'Enter average tuition',
+  },
+  {
+    name: 'international_students_count',
+    label: 'International Students Count',
+    type: 'number',
+    placeholder: 'Enter number of international students',
+  },
+  {
+    name: 'intake',
+    label: 'Intake',
+    type: 'text',
+    placeholder: 'e.g., Fall, Spring',
+  },
+  {
+    name: 'application_deadline',
+    label: 'Application Deadline',
+    type: 'date',
+    placeholder: 'Select deadline date',
+  },
+  {
+    name: 'visa_processing_time',
+    label: 'Visa Processing Time',
+    type: 'text',
+    placeholder: 'e.g., 4-6 weeks',
+  },
+  {
+    name: 'work_permit',
+    label: 'Work Permit',
+    type: 'text',
+    placeholder: 'Enter work permit details',
   },
   {
     name: 'status',
@@ -215,22 +330,29 @@ const formFields = [
     ]
   },
   {
-    name: 'short_description',
-    label: 'Short Description',
+    name: 'overview',
+    label: 'Overview',
     type: 'textarea',
-    placeholder: 'Enter country description...',
+    placeholder: 'Enter program overview...',
+    rows: 4
+  },
+  {
+    name: 'features',
+    label: 'Features',
+    type: 'textarea',
+    placeholder: 'Enter program features...',
     rows: 4
   }
-];
+]);
 
 // Filter fields configuration
 const filterFields = [
-  // {
-  //   name: 'name',
-  //   label: 'Country Name',
-  //   type: 'text',
-  //   placeholder: 'Enter country name...'
-  // },
+  {
+    name: 'name',
+    label: 'Program Name',
+    type: 'text',
+    placeholder: 'Enter program name...'
+  },
   {
     name: 'status',
     label: 'Status',
@@ -257,27 +379,39 @@ const tableColumns = [
   },
   {
     key: 'name',
-    label: 'Country Name',
+    label: 'Program Name',
     sortable: true
   },
   {
-    key: 'flag',
-    label: 'Flag',
-    type: 'image',
-    sortable: false,
-    width: '80px' 
+    key: 'services',
+    label: 'Services',
+    sortable: false
   },
   {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
+    key: 'eligibilities',
+    label: 'Eligibilities',
+    sortable: false
+  },
+  {
+    key: 'application-process',
+    label: 'Application Process',
+    sortable: false
+  },
+  {
+    key: 'resources',
+    label: 'Resources',
+    sortable: false
+  },
+  {
+    key: 'specializations',
+    label: 'Specializations',
     sortable: false
   },
   {
     key: 'status',
     label: 'Status',
     type: 'status',
-    sortable: true
+    sortable: false
   },
   {
     key: 'actions',
@@ -305,7 +439,7 @@ const tableActions = [
   }
 ];
 
-// Computed - Filtered services (client-side filtering)
+// Computed - Filtered services
 const filteredData = computed(() => {
   let filtered = items.value.filter(service => {
     const matchesName = !searchFilters.value.serviceName || 
@@ -345,18 +479,30 @@ const paginatedData = computed(() => {
   return filteredData.value.slice(start, end);
 });
 
+// Load program options from API
+const loadProgramOptions = async () => {
+  try {
+    const response = await axios.get(process.env.VUE_APP_BASE_API+'/system/programs');
+    if (response.data && response.data.programs) {
+      programOptions.value = response.data.programs;
+    }
+  } catch (error) {
+    console.error('Failed to load program options:', error);
+    showNotification('error', 'Failed to load programs list', {
+      details: 'Could not fetch program options. Please refresh the page.'
+    });
+  }
+};
+
 // Load services from API
 const loadData = async () => {
-  // Clear any previous errors
   crudStore.clearError();
   
-  // Build query parameters
   const params = {
     page: currentPage.value,
     limit: itemsPerPage.value
   };
   
-  // Add search filters if they exist
   if (searchFilters.value.serviceName) {
     params.search = searchFilters.value.serviceName;
   }
@@ -370,19 +516,34 @@ const loadData = async () => {
     params.date = searchFilters.value.date;
   }
   
-  // Add sorting
   if (sortConfig.value.by) {
     params.sort_by = sortConfig.value.by;
     params.sort_order = sortConfig.value.order;
   }
   
-  const result = await crudStore.fetchAll('/admin/countries', params);
+  const result = await crudStore.fetchAll(`/admin/country-programs/${countryId.value}`, params);
   
   if (!result.success) {
-    showNotification('error', 'Failed to load countries', {
+    showNotification('error', 'Failed to load programs', {
       details: result.error.message || 'Please try again later.'
     });
   }
+};
+
+// FIXED: Open management modal with event.stopPropagation()
+const openManageModal = (program, tab) => {
+  console.log('Opening manage modal for program:', program.id, 'tab:', tab);
+  selectedProgramId.value = program.id;
+  selectedProgramName.value = program.name || 'Program';
+  selectedTab.value = tab;
+  showManagementModal.value = true;
+};
+
+// FIXED: Handle refresh from management modal WITHOUT reloading main list
+const handleManagementRefresh = () => {
+  console.log('Management modal refreshed - keeping main list intact');
+  // Don't reload the main program list when items inside are updated
+  // loadData(); // REMOVED - this was causing the table to go blank
 };
 
 // Modal handlers
@@ -393,15 +554,14 @@ const openCreateModal = () => {
 };
 
 const openEditModal = async (service) => {
-  // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/country-programs/single/', service.id);
   
   if (result.success) {
     modalMode.value = 'edit';
     selectedService.value = { ...result.data };
     showFormModal.value = true;
   } else {
-    showNotification('error', 'Failed to load service details', {
+    showNotification('error', 'Failed to load program details', {
       details: result.error.message
     });
   }
@@ -413,66 +573,50 @@ const openDeleteModal = (service) => {
 };
 
 const openViewModal = async (service) => {
-  // Fetch full service details
-  const result = await crudStore.fetchById('/admin/countries/', service.id);
+  const result = await crudStore.fetchById('/admin/country-programs/single/', service.id);
   
   if (result.success) {
     selectedService.value = { ...result.data };
     showViewModal.value = true;
   } else {
-    showNotification('error', 'Failed to load service details', {
+    showNotification('error', 'Failed to load program details', {
       details: result.error.message
     });
   }
 };
 
-// Form submit handler (create/edit) - WITH DEBUGGING
+// Form submit handler
 const handleFormSubmit = async (data, mode, initialData) => {
-  console.log('=== FORM SUBMIT DEBUG ===');
-  console.log('Received data:', data);
-  console.log('Data is FormData?', data instanceof FormData);
-  console.log('Mode:', mode);
-  
   let result;
   
-  // BaseModal is sending FormData, we need to check if it has entries
   if (data instanceof FormData) {
-    console.log('Data is FormData - checking entries...');
-    
-    let hasData = false;
-    for (let pair of data.entries()) {
-      console.log(`  ${pair[0]}: ${pair[1]}`);
-      hasData = true;
-    }
+    // Check if FormData has any entries
+    const hasData = Array.from(data.entries()).length > 0;
     
     if (!hasData) {
-      console.error('ERROR: FormData is empty!');
       throw new Error('No form data received');
     }
     
-    // FormData already created by BaseModal, use it directly
+    // Add country_id to FormData
+    data.append('country_id', countryId.value);
+    
     if (mode === 'create') {
-      console.log('Sending CREATE request');
-      result = await crudStore.create('/admin/countries', data);
+      result = await crudStore.create('/admin/country-programs', data);
     } else {
-      // For update, add ID and _method
       data.append('id', initialData.id);
       data.append('_method', 'PUT');
-      console.log('Sending UPDATE request');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, data);
+      result = await crudStore.post(`/admin/country-programs/${initialData.id}`, data);
     }
   } else {
-    // BaseModal sent plain object
-    console.log('Data is plain object:', data);
-    console.log('Data keys:', Object.keys(data));
-    
     if (!data || Object.keys(data).length === 0) {
-      console.error('ERROR: No data received!');
       throw new Error('No form data received');
     }
     
-    // Convert to FormData
     const formData = new FormData();
+    
+    // Add country_id first
+    formData.append('country_id', countryId.value);
+    
     Object.keys(data).forEach(key => {
       const value = data[key];
       if (value !== null && value !== undefined && value !== '') {
@@ -485,18 +629,15 @@ const handleFormSubmit = async (data, mode, initialData) => {
     });
     
     if (mode === 'create') {
-      result = await crudStore.create('/admin/countries', formData);
+      result = await crudStore.create('/admin/country-programs', formData);
     } else {
       formData.append('id', initialData.id);
       formData.append('_method', 'PUT');
-      result = await crudStore.post(`/admin/countries/${initialData.id}`, formData);
+      result = await crudStore.post(`/admin/country-programs/${initialData.id}`, formData);
     }
   }
   
-  console.log('Result:', result);
-  
   if (!result.success) {
-    console.error('Request failed:', result.error);
     throw new Error(result.error.message);
   }
   
@@ -505,7 +646,7 @@ const handleFormSubmit = async (data, mode, initialData) => {
 
 // Delete submit handler
 const handleDeleteSubmit = async (data) => {
-  const result = await crudStore.delete('/admin/countries/', data.id);
+  const result = await crudStore.delete('/admin/country-programs/', data.id);
   
   if (!result.success) {
     throw new Error(result.error.message);
@@ -517,28 +658,26 @@ const handleDeleteSubmit = async (data) => {
 // Success handlers
 const handleModalSuccess = ({ data, mode }) => {
   if (mode === 'create') {
-    showNotification('success', 'country created successfully!', {
-      details: `${data.name || 'The countrie'} has been added to your services.`,
+    showNotification('success', 'Program created successfully!', {
+      details: `${data.name || 'The program'} has been added.`,
       autoClose: 3000
     });
   } else if (mode === 'edit') {
-    showNotification('success', 'Country updated successfully!', {
-      details: `Changes to ${data.name || 'the country'} have been saved.`,
+    showNotification('success', 'Program updated successfully!', {
+      details: `Changes to ${data.name || 'the program'} have been saved.`,
       autoClose: 3000
     });
   }
   
-  // Reload services
   loadData();
 };
 
 const handleDeleteSuccess = () => {
-  showNotification('success', 'Country deleted successfully!', {
-    details: 'The country has been permanently removed from the system.',
+  showNotification('success', 'Program deleted successfully!', {
+    details: 'The program has been permanently removed from the system.',
     autoClose: 3000
   });
   
-  // Reload services
   loadData();
 };
 
@@ -550,7 +689,6 @@ const handleModalError = ({ error, mode }) => {
   let errorDetails = '';
   let errorList = [];
   
-  // Check if it's a validation error from the store
   if (error.response?.data?.errors) {
     errorDetails = 'Please check the following fields:';
     errorList = Object.entries(error.response.data.errors).map(
@@ -561,7 +699,6 @@ const handleModalError = ({ error, mode }) => {
     errorList = Object.values(error.errors);
   }
   
-  // Show error notification
   if (errorList.length > 0) {
     showNotification('error', errorMessage, {
       details: errorDetails,
@@ -580,13 +717,12 @@ const handleSearch = () => {
   loadData();
   
   showNotification('info', 'Search filters applied', {
-    details: `Found ${filteredData.value.length} country(s) matching your criteria.`,
+    details: `Found ${filteredData.value.length} program(s) matching your criteria.`,
     autoClose: 2000
   });
 };
 
 const handleReset = () => {
-  // Reset filters
   searchFilters.value = {
     serviceName: '',
     category: '',
@@ -636,22 +772,14 @@ const handlePageSizeChange = (newSize) => {
   loadData();
 };
 
-// Watch for filter changes (optional - for real-time filtering)
-// Uncomment if you want to reload on every filter change
-// watch(searchFilters, () => {
-//   currentPage.value = 1;
-//   loadData();
-// }, { deep: true });
-
 // Load services on mount
 onMounted(() => {
+  loadProgramOptions(); // Load program options first
   loadData();
 });
 
 // Cleanup on unmount
-import { onBeforeUnmount } from 'vue';
 onBeforeUnmount(() => {
-  // Clear current item when leaving the page
   crudStore.clearCurrentItem();
 });
 </script>
@@ -794,31 +922,6 @@ onBeforeUnmount(() => {
   padding: 40px;
 }
 
-.price-value {
-  font-weight: 600;
-  color: #667eea;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .table-container,
-  .loading-container,
-  .error-container {
-    padding: 20px;
-  }
-  
-  .dashboard {
-    padding: 10px;
-  }
-}
-
-
 /* Programs Cell Styles */
 .programs-cell {
   display: flex;
@@ -838,12 +941,14 @@ onBeforeUnmount(() => {
   background: #667eea;
   color: white;
   text-decoration: none;
+  border: none;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
   transition: all 0.3s ease;
   display: inline-block;
   text-align: center;
+  cursor: pointer;
 }
 
 .manage-programs-btn:hover {
@@ -852,7 +957,24 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
+/* Responsive */
 @media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .table-container,
+  .loading-container,
+  .error-container {
+    padding: 20px;
+  }
+  
+  .dashboard {
+    padding: 10px;
+  }
+  
   .programs-cell {
     width: 100%;
   }

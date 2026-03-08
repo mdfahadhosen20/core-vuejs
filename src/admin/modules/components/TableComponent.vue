@@ -23,6 +23,7 @@
                 'text-center': column.align === 'center',
                 'text-right': column.align === 'right'
               }"
+              :style="{ minWidth: column.minWidth || 'auto', width: column.width || 'auto' }"
               @click="column.sortable && handleSort(column.key)"
             >
               <div class="th-content">
@@ -62,9 +63,21 @@
                 :value="getNestedValue(row, column.key)"
                 :column="column"
               >
+                <!-- Image Preview -->
+                <div v-if="column.type === 'image'" class="image-cell">
+                  <img 
+                    v-if="getNestedValue(row, column.key)"
+                    :src="getImageUrl(getNestedValue(row, column.key), column)" 
+                    :alt="column.label"
+                    class="table-image-preview"
+                    @click.stop="handleImageClick(getNestedValue(row, column.key), column, row)"
+                  />
+                  <span v-else class="no-image">No Image</span>
+                </div>
+
                 <!-- Status Badge -->
                 <span 
-                  v-if="column.type === 'status'"
+                  v-else-if="column.type === 'status'"
                   class="status-badge" 
                   :class="`status-${getNestedValue(row, column.key)}`"
                 >
@@ -120,6 +133,18 @@
         </slot>
       </div>
     </div>
+
+    <!-- Image Preview Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showImageModal" class="image-modal-overlay" @click="closeImageModal">
+          <div class="image-modal-container" @click.stop>
+            <button class="image-modal-close" @click="closeImageModal">×</button>
+            <img :src="currentImageUrl" alt="Preview" class="image-modal-preview" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -199,14 +224,24 @@ const props = defineProps({
   initialSort: {
     type: Object,
     default: () => ({ by: '', order: 'asc' })
+  },
+  
+  // Base URL for images (optional)
+  imageBaseUrl: {
+    type: String,
+    default: ''
   }
 });
 
-const emit = defineEmits(['action', 'row-click', 'sort']);
+const emit = defineEmits(['action', 'row-click', 'sort', 'image-click']);
 
 // Sorting state
 const sortBy = ref(props.initialSort.by);
 const sortOrder = ref(props.initialSort.order);
+
+// Image modal state
+const showImageModal = ref(false);
+const currentImageUrl = ref('');
 
 // Get nested object value by path (e.g., "user.name")
 const getNestedValue = (obj, path) => {
@@ -224,6 +259,42 @@ const isRowSelected = (row) => {
   return props.selectedRows.some(selected => 
     getNestedValue(selected, props.rowKey) === rowKey
   );
+};
+
+// Get image URL
+const getImageUrl = (value, column) => {
+  if (!value) return '';
+  
+  // If custom image URL builder is provided
+  if (column.imageUrlBuilder && typeof column.imageUrlBuilder === 'function') {
+    return column.imageUrlBuilder(value);
+  }
+  
+  // If it's already a full URL, return it
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  
+  // Use column-specific base URL or global base URL
+  const baseUrl = process.env.VUE_APP_BASE_URL || '';
+  
+  // Remove leading slash from value if baseUrl ends with slash
+  const cleanValue = baseUrl.endsWith('/') && value.startsWith('/') ? value.slice(1) : value;
+  
+  return `${baseUrl}/${cleanValue}`;
+};
+
+// Handle image click
+const handleImageClick = (value, column, row) => {
+  currentImageUrl.value = getImageUrl(value, column);
+  showImageModal.value = true;
+  emit('image-click', { value, column, row, url: currentImageUrl.value });
+};
+
+// Close image modal
+const closeImageModal = () => {
+  showImageModal.value = false;
+  currentImageUrl.value = '';
 };
 
 // Format value based on column type
@@ -298,6 +369,8 @@ const handleAction = (actionName, row) => {
 <style scoped>
 .data-table {
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .table-header {
@@ -305,6 +378,8 @@ const handleAction = (actionName, row) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .results-count {
@@ -315,20 +390,49 @@ const handleAction = (actionName, row) => {
 .table-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .table-wrapper {
+  width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: white;
+}
+
+/* Custom scrollbar for better UX */
+.table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 table {
   width: 100%;
+  min-width: 800px; /* Ensure minimum width for better mobile experience */
   border-collapse: collapse;
   background: white;
 }
 
 thead {
   background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 th {
@@ -398,6 +502,104 @@ tbody tr.selected {
   background: #e7f0ff;
 }
 
+/* Image Cell Styles */
+.image-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-image-preview {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid #dee2e6;
+}
+
+.table-image-preview:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #667eea;
+}
+
+.no-image {
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Image Modal */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.image-modal-container {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.image-modal-close:hover {
+  background: #dc3545;
+  color: white;
+  transform: scale(1.1);
+}
+
+.image-modal-preview {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal Transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 12px;
@@ -445,6 +647,7 @@ tbody tr.selected {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .action-btn:disabled {
@@ -525,12 +728,16 @@ tbody tr.selected {
 @media (max-width: 768px) {
   .table-header {
     flex-direction: column;
-    gap: 15px;
     align-items: flex-start;
   }
   
+  .table-wrapper {
+    border-radius: 0;
+    margin: 0 -15px; /* Extend to screen edges on mobile */
+  }
+  
   table {
-    min-width: 800px;
+    min-width: 600px;
   }
   
   .action-buttons {
@@ -539,6 +746,16 @@ tbody tr.selected {
   
   .action-btn {
     width: 100%;
+  }
+  
+  .table-image-preview {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .image-modal-close {
+    top: 10px;
+    right: 10px;
   }
 }
 </style>

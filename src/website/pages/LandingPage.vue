@@ -1,8 +1,9 @@
 <template>
-  <CarouselComponentOne />
+  <CarouselComponentOne :banners="banners" />
+  
   <section class="services-section">
     <!-- Program Categories Section -->
-    <div class="container">
+    <div v-if="programs.length > 0" class="container">
       <div class="section-header">
         <span class="section-badge">Our Services</span>
         <h2 class="section-title">Study Programs We Specialize In</h2>
@@ -11,88 +12,44 @@
         </p>
       </div>
 
-      <div class="programs-grid">
-        <!-- Undergraduate -->
-        <router-link to="/service/1" class="program-card" @click="selectProgram('undergraduate')">
-          <div class="program-image">
-            <svg class="program-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-            <div class="program-overlay"></div>
-          </div>
-          <div class="program-content">
-            <h3 class="program-title">Undergraduate Programs</h3>
-            <p class="program-description">
-              Bachelor's degree programs for high school graduates ready to start their university journey abroad.
-            </p>
-            <ul class="program-features">
-              <li>Foundation & Pathway Programs</li>
-              <li>Bachelor's Degree Admissions</li>
-              <li>Scholarship Assistance</li>
-              <li>SAT/ACT Preparation</li>
-            </ul>
-            <div class="program-cta">
-              <span>Learn More</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </div>
-        </router-link>
+      <!-- Loading State for Programs -->
+      <div v-if="loadingPrograms" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading programs...</p>
+      </div>
 
-        <!-- Graduate -->
-        <router-link to="/service/1" class="program-card featured" @click="selectProgram('graduate')">
-          <div class="featured-badge">Most Popular</div>
+      <!-- Programs Grid -->
+      <div v-else class="programs-grid">
+        <router-link 
+          v-for="(program, index) in programs" 
+          :key="program.id"
+          :to="`/program/${program.id}`" 
+          class="program-card" 
+          :class="{ 'featured': index === featuredIndex }"
+          @click="selectProgram(program)"
+        >
+          <!-- <div v-if="index === featuredIndex" class="featured-badge">Most Popular</div> -->
           <div class="program-image">
             <svg class="program-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
               <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-              <circle cx="12" cy="10" r="3"/>
+              <circle v-if="index === featuredIndex" cx="12" cy="10" r="3"/>
+              <template v-else-if="index > featuredIndex">
+                <path d="M12 7v10"/>
+                <path d="M8 10l4-3 4 3"/>
+              </template>
             </svg>
             <div class="program-overlay"></div>
           </div>
           <div class="program-content">
-            <h3 class="program-title">Graduate Programs</h3>
-            <p class="program-description">
-              Master's degree programs for career advancement and specialized knowledge in your field of interest.
+            <h3 class="program-title">{{ program.name }}</h3>
+            <p v-if="program.short_description" class="program-description">
+              {{ program.short_description }}
             </p>
-            <ul class="program-features">
-              <li>Master's Degree Admissions</li>
-              <li>GRE/GMAT Preparation</li>
-              <li>Research Opportunities</li>
-              <li>Assistantship Guidance</li>
-            </ul>
-            <div class="program-cta">
-              <span>Learn More</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </div>
-        </router-link>
-
-        <!-- Postgraduate -->
-        <router-link to="/service/1" class="program-card" @click="selectProgram('postgraduate')">
-          <div class="program-image">
-            <svg class="program-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-              <path d="M12 7v10"/>
-              <path d="M8 10l4-3 4 3"/>
-            </svg>
-            <div class="program-overlay"></div>
-          </div>
-          <div class="program-content">
-            <h3 class="program-title">Postgraduate Programs</h3>
-            <p class="program-description">
-              PhD and doctoral programs for those pursuing advanced research and academic excellence.
-            </p>
-            <ul class="program-features">
-              <li>PhD & Doctoral Admissions</li>
-              <li>Research Proposal Help</li>
-              <li>Funding & Grants</li>
-              <li>Supervisor Matching</li>
+            <ul v-if="program.services && program.services.length > 0" class="program-features">
+              <li v-for="service in program.services.slice(0, 4)" :key="service.id">
+                {{ service.service_statement }}
+              </li>
             </ul>
             <div class="program-cta">
               <span>Learn More</span>
@@ -106,165 +63,66 @@
     </div>
 
     <!-- Countries Section -->
-    <div class="countries-section">
+    <div v-if="countries.length > 0" class="countries-section">
       <div class="container">
         <div class="section-header">
           <span class="section-badge">Study Destinations</span>
           <h2 class="section-title">Countries We Serve</h2>
           <p class="section-description">
-            We have partnerships with top universities across four premier study destinations
+            We have partnerships with top universities across premier study destinations
           </p>
         </div>
 
-        <div class="countries-grid">
-          <!-- USA -->
-          <div class="country-card" @click="selectCountry('usa')">
-            <div class="country-flag">
-              <svg viewBox="0 0 60 30" class="flag-svg">
-                <rect width="60" height="30" fill="#B22234"/>
-                <path d="M0,3.46h60M0,6.92h60M0,10.38h60M0,13.84h60M0,17.3h60M0,20.76h60M0,24.22h60M0,27.68h60" stroke="#fff" stroke-width="2.31"/>
-                <rect width="24" height="15" fill="#3C3B6E"/>
-                <g fill="#fff">
-                  <circle cx="3" cy="2" r="0.8"/>
-                  <circle cx="6" cy="2" r="0.8"/>
-                  <circle cx="9" cy="2" r="0.8"/>
-                  <circle cx="12" cy="2" r="0.8"/>
-                  <circle cx="15" cy="2" r="0.8"/>
-                  <circle cx="18" cy="2" r="0.8"/>
-                  <circle cx="21" cy="2" r="0.8"/>
-                  <circle cx="4.5" cy="4" r="0.8"/>
-                  <circle cx="7.5" cy="4" r="0.8"/>
-                  <circle cx="10.5" cy="4" r="0.8"/>
-                  <circle cx="13.5" cy="4" r="0.8"/>
-                  <circle cx="16.5" cy="4" r="0.8"/>
-                  <circle cx="19.5" cy="4" r="0.8"/>
-                </g>
-              </svg>
-            </div>
-            <div class="country-content">
-              <h3 class="country-name">United States</h3>
-              <p class="country-description">Home to world's top universities including Ivy League institutions</p>
-              <div class="country-stats">
-                <div class="stat-item">
-                  <span class="stat-number">5,000+</span>
-                  <span class="stat-label">Universities</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-number">1M+</span>
-                  <span class="stat-label">Int'l Students</span>
-                </div>
-              </div>
-              <div class="country-features">
-                <span class="feature-tag">STEM Excellence</span>
-                <span class="feature-tag">Work Opportunities</span>
-                <span class="feature-tag">Research Hub</span>
-              </div>
-            </div>
-          </div>
+        <!-- Loading State for Countries -->
+        <div v-if="loadingCountries" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading countries...</p>
+        </div>
 
-          <!-- Canada -->
-          <div class="country-card" @click="selectCountry('canada')">
+        <!-- Countries Grid -->
+        <div v-else class="countries-grid">
+          <router-link
+            v-for="country in countries"
+            :key="country.id"
+            :to="`/country/${country.id}`"
+            class="country-card"
+            @click="selectCountry(country)"
+          >
             <div class="country-flag">
-              <svg viewBox="0 0 60 30" class="flag-svg">
-                <rect width="60" height="30" fill="#fff"/>
-                <rect width="15" height="30" fill="#FF0000"/>
-                <rect x="45" width="15" height="30" fill="#FF0000"/>
-                <path d="M30,8l2,6h6l-5,4 2,6-5-4-5,4 2-6-5-4h6z" fill="#FF0000"/>
-              </svg>
+              <img 
+                v-if="country.flag" 
+                :src="`${urlBase}/${country.flag}`" 
+                :alt="country.name"
+                class="flag-image"
+              />
+              <div v-else class="flag-placeholder">
+                <svg viewBox="0 0 60 30" class="flag-svg">
+                  <rect width="60" height="30" fill="#E5E7EB"/>
+                  <text x="30" y="18" text-anchor="middle" fill="#6B7280" font-size="8">No Flag</text>
+                </svg>
+              </div>
             </div>
             <div class="country-content">
-              <h3 class="country-name">Canada</h3>
-              <p class="country-description">Affordable, high-quality education with excellent immigration pathways</p>
-              <div class="country-stats">
-                <div class="stat-item">
-                  <span class="stat-number">400+</span>
-                  <span class="stat-label">Universities</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-number">600K+</span>
-                  <span class="stat-label">Int'l Students</span>
-                </div>
-              </div>
-              <div class="country-features">
-                <span class="feature-tag">PR Pathways</span>
-                <span class="feature-tag">Safe & Welcoming</span>
-                <span class="feature-tag">Co-op Programs</span>
+              <h3 class="country-name">{{ country.name }}</h3>
+              <p v-if="country.short_description" class="country-description">
+                {{ country.short_description }}
+              </p>
+              <p v-else class="country-description">
+                Explore amazing educational opportunities in {{ country.name }}
+              </p>
+              <div class="country-cta">
+                <span>Explore Programs</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
               </div>
             </div>
-          </div>
-
-          <!-- UK -->
-          <div class="country-card" @click="selectCountry('uk')">
-            <div class="country-flag">
-              <svg viewBox="0 0 60 30" class="flag-svg">
-                <rect width="60" height="30" fill="#012169"/>
-                <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
-                <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/>
-                <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
-                <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
-              </svg>
-            </div>
-            <div class="country-content">
-              <h3 class="country-name">United Kingdom</h3>
-              <p class="country-description">Historic universities with globally recognized degrees and rich culture</p>
-              <div class="country-stats">
-                <div class="stat-item">
-                  <span class="stat-number">160+</span>
-                  <span class="stat-label">Universities</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-number">500K+</span>
-                  <span class="stat-label">Int'l Students</span>
-                </div>
-              </div>
-              <div class="country-features">
-                <span class="feature-tag">Oxford & Cambridge</span>
-                <span class="feature-tag">1-Year Masters</span>
-                <span class="feature-tag">PSW Visa</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Malaysia -->
-          <div class="country-card" @click="selectCountry('malaysia')">
-            <div class="country-flag">
-              <svg viewBox="0 0 60 30" class="flag-svg">
-                <rect width="60" height="30" fill="#fff"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="0"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="4.28"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="8.56"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="12.84"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="17.12"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="21.4"/>
-                <rect width="60" height="2.14" fill="#CC0001" y="25.68"/>
-                <rect width="30" height="15" fill="#010066"/>
-                <path d="M15,3 l3,9 h9 l-7,5 3,9-8-6-8,6 3-9-7-5h9z" fill="#FC0" transform="translate(3,-1)"/>
-                <path d="M20,8 a5,5 0 1,0 0,7 a4,4 0 1,1 0-7" fill="#FC0"/>
-              </svg>
-            </div>
-            <div class="country-content">
-              <h3 class="country-name">Malaysia</h3>
-              <p class="country-description">Affordable Asian education hub with diverse culture and quality programs</p>
-              <div class="country-stats">
-                <div class="stat-item">
-                  <span class="stat-number">70+</span>
-                  <span class="stat-label">Universities</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-number">150K+</span>
-                  <span class="stat-label">Int'l Students</span>
-                </div>
-              </div>
-              <div class="country-features">
-                <span class="feature-tag">Low Cost</span>
-                <span class="feature-tag">English Medium</span>
-                <span class="feature-tag">Gateway to Asia</span>
-              </div>
-            </div>
-          </div>
+          </router-link>
         </div>
       </div>
     </div>
+
+    <CarouselComponentThree />
 
     <!-- Additional Services -->
     <div class="additional-services">
@@ -358,11 +216,24 @@
         <div class="cta-content">
           <h2 class="cta-title">Ready to Start Your Journey?</h2>
           <p class="cta-description">
-            Book a free consultation with our expert counselors today and take the first step towards your dream university
+            Book a consultation with our expert counselors today and take the first step towards your dream university
           </p>
           <div class="cta-buttons">
-            <button class="cta-button primary">Schedule Free Consultation</button>
-            <button class="cta-button secondary">Download Brochure</button>
+            <a 
+              v-if="systemSettings.phone" 
+              :href="`tel:${systemSettings.phone}`" 
+              class="cta-button primary"
+            >
+              Schedule For Consultation
+            </a>
+            <a 
+              v-if="systemSettings.whatsapp" 
+              :href="`https://wa.me/${systemSettings.whatsapp.replace(/[^0-9]/g, '')}`" 
+              target="_blank"
+              class="cta-button secondary"
+            >
+              Chat on WhatsApp
+            </a>
           </div>
         </div>
       </div>
@@ -371,17 +242,93 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 import CarouselComponentOne from './component/CarouselComponentOne.vue';
+import CarouselComponentThree from './component/CarouselComponentThree.vue';
 
-function selectProgram(program) {
-    console.log('Selected program:', program)
-    // Handle program selection - could route to details page or open modal
-}
+// API Base URL
+const apiBase = ref(process.env.VUE_APP_BASE_API);
+const urlBase = ref(process.env.VUE_APP_BASE_URL);
 
-function selectCountry(country) {
-    console.log('Selected country:', country)
-    // Handle country selection - could route to details page or open modal
-}
+// Data state
+const banners = ref([]);
+const programs = ref([]);
+const countries = ref([]);
+const systemSettings = ref({
+  enable_newsletter: false,
+  phone: null,
+  whatsapp: null,
+  email: null
+});
+
+// Loading states
+const loadingPrograms = ref(false);
+const loadingCountries = ref(false);
+const loadingSystem = ref(false);
+
+// Computed
+const featuredIndex = computed(() => {
+  // Make the middle program featured, or the second one if there are only a few
+  if (programs.value.length === 0) return -1;
+  if (programs.value.length <= 2) return 0;
+  return Math.floor(programs.value.length / 2);
+});
+
+// Methods
+const loadLandingPageData = async () => {
+  loadingPrograms.value = true;
+  loadingCountries.value = true;
+  
+  try {
+    const response = await axios.get(`${apiBase.value}/landing-page`);
+    const data = response.data;
+    
+    // Load banners
+    banners.value = data.banner || [];
+    
+    // Load programs (only active ones)
+    programs.value = (data.programs || []).filter(p => p.status === 'active');
+    
+    // Load countries (only active ones)
+    countries.value = (data.countries || []).filter(c => c.status === 'active');
+    
+  } catch (error) {
+    console.error('Failed to load landing page data:', error);
+  } finally {
+    loadingPrograms.value = false;
+    loadingCountries.value = false;
+  }
+};
+
+const loadSystemSettings = async () => {
+  loadingSystem.value = true;
+  
+  try {
+    const response = await axios.get(`${apiBase.value}/system`);
+    systemSettings.value = response.data.system || {};
+  } catch (error) {
+    console.error('Failed to load system settings:', error);
+  } finally {
+    loadingSystem.value = false;
+  }
+};
+
+const selectProgram = (program) => {
+  console.log('Selected program:', program);
+  // Additional handling if needed
+};
+
+const selectCountry = (country) => {
+  console.log('Selected country:', country);
+  // Additional handling if needed
+};
+
+// Load data on mount
+onMounted(() => {
+  loadLandingPageData();
+  loadSystemSettings();
+});
 </script>
 
 <style scoped>
@@ -393,6 +340,46 @@ function selectCountry(country) {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #1E40AF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: #6B7280;
+  margin: 0;
 }
 
 /* Section Header */
@@ -577,7 +564,7 @@ function selectCountry(country) {
 
 .countries-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 32px;
   margin-bottom: 40px;
 }
@@ -589,6 +576,8 @@ function selectCountry(country) {
   border: 2px solid #E5E7EB;
   transition: all 0.4s ease;
   cursor: pointer;
+  text-decoration: none;
+  display: block;
 }
 
 .country-card:hover {
@@ -598,13 +587,28 @@ function selectCountry(country) {
 }
 
 .country-flag {
-  width: 80px;
-  height: 50px;
-  border-radius: 8px;
+  width: 100px;
+  /* height: 120px; */
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 24px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.flag-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.flag-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .flag-svg {
@@ -617,7 +621,7 @@ function selectCountry(country) {
 }
 
 .country-name {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #1E3A8A;
   margin-bottom: 12px;
@@ -627,50 +631,29 @@ function selectCountry(country) {
   font-size: 15px;
   color: #6B7280;
   line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.country-stats {
-  display: flex;
-  gap: 32px;
   margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #E5E7EB;
 }
 
-.stat-item {
+.country-cta {
   display: flex;
-  flex-direction: column;
-}
-
-.stat-number {
-  font-size: 24px;
-  font-weight: 800;
-  color: #EF4444;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #6B7280;
-  font-weight: 500;
-}
-
-.country-features {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  color: #1E40AF;
+  font-weight: 600;
+  font-size: 15px;
+  transition: gap 0.3s ease;
 }
 
-.feature-tag {
-  background: white;
-  color: #1E40AF;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1.5px solid #1E40AF;
+.country-card:hover .country-cta {
+  gap: 12px;
+}
+
+.country-cta svg {
+  transition: transform 0.3s ease;
+}
+
+.country-card:hover .country-cta svg {
+  transform: translateX(4px);
 }
 
 /* Additional Services */
@@ -730,6 +713,12 @@ function selectCountry(country) {
   line-height: 1.5;
 }
 
+
+.input-group {
+  display: flex;
+  gap: 12px;
+}
+
 /* CTA Section */
 .cta-section {
   background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
@@ -786,6 +775,8 @@ function selectCountry(country) {
   cursor: pointer;
   transition: all 0.3s ease;
   border: 2px solid transparent;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .cta-button.primary {
@@ -825,6 +816,10 @@ function selectCountry(country) {
   .services-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .countries-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
@@ -847,8 +842,16 @@ function selectCountry(country) {
     transform: scale(1);
   }
 
-  .country-stats {
-    gap: 20px;
+  .newsletter-title {
+    font-size: 28px;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .newsletter-button {
+    width: 100%;
   }
 
   .cta-title {

@@ -44,19 +44,6 @@
           <template #cell-price="{ value }">
             <span class="price-value">{{ value }}</span>
           </template>
-          
-          <!-- Custom slot for programs column -->
-          <template #cell-programs="{ row, value }">
-            <div class="programs-cell">
-              <span class="programs-count">{{ value || 0 }} Programs</span>
-              <router-link 
-                :to="'/admin/dashboard/country/'+row.id+'/programs'"
-                class="manage-programs-btn"
-              >
-                Manage Programs
-              </router-link>
-            </div>
-          </template>
         </DataTable>
 
         <!-- Pagination Component -->
@@ -204,6 +191,24 @@ const formFields = [
     accept: 'image/*'
   },
   {
+    name: 'university_count',
+    label: 'University Count',
+    type: 'text',
+    required: false
+  },
+  {
+    name: 'international_students_count',
+    label: 'International Students Count',
+    type: 'text',
+    required: false
+  },
+  {
+    name: 'average_tution',
+    label: 'Average Tution',
+    type: 'text',
+    required: false
+  },
+  {
     name: 'status',
     label: 'Status',
     type: 'radio',
@@ -225,12 +230,12 @@ const formFields = [
 
 // Filter fields configuration
 const filterFields = [
-  // {
-  //   name: 'name',
-  //   label: 'Country Name',
-  //   type: 'text',
-  //   placeholder: 'Enter country name...'
-  // },
+  {
+    name: 'countryName',
+    label: 'Country Name',
+    type: 'text',
+    placeholder: 'Enter country name...'
+  },
   {
     name: 'status',
     label: 'Status',
@@ -268,15 +273,30 @@ const tableColumns = [
     width: '80px' 
   },
   {
-    key: 'programs',
-    label: 'Programs',
-    type: 'custom',
+    key: 'university_count',
+    label: 'University Count',
+    sortable: false
+  },
+  {
+    key: 'international_students_count',
+    label: 'International Students Count',
+    sortable: false
+  },
+  {
+    key: 'average_tution',
+    label: 'Average Tution',
     sortable: false
   },
   {
     key: 'status',
     label: 'Status',
     type: 'status',
+    sortable: true
+  },
+  {
+    key: 'createdDate',
+    label: 'Created Date',
+    type: 'date',
     sortable: true
   },
   {
@@ -815,50 +835,6 @@ onBeforeUnmount(() => {
   
   .dashboard {
     padding: 10px;
-  }
-}
-
-
-/* Programs Cell Styles */
-.programs-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.programs-count {
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.manage-programs-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.manage-programs-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-@media (max-width: 768px) {
-  .programs-cell {
-    width: 100%;
-  }
-  
-  .manage-programs-btn {
-    width: 100%;
   }
 }
 </style>
